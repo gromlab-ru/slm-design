@@ -1,0 +1,14 @@
+{
+  "name": "slm-design",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "npm run build:skill",
+    "build:skill": "node scripts/build-skill.mjs",
+    "check": "npm run build && npm run check:skill",
+    "check:skill": "node scripts/check-skill.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
