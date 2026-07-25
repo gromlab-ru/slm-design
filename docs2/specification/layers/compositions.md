@@ -6,7 +6,7 @@ normative: true
 
 # Слой Compositions
 
-`compositions` собирает application flows из готовых domain runtimes, infra capabilities, UI modules и других composition modules.
+`compositions` собирает application flows из module public APIs, technical capabilities и UI modules и может владеть product logic в пределах своей ответственности.
 
 ## Ответственность
 
@@ -18,10 +18,10 @@ Composition может быть:
 - screen;
 - widget;
 - provider composition;
-- multi-domain hook;
-- non-visual graph owner.
+- multi-module hook;
+- non-visual application wiring owner.
 
-Структура слоя свободна и должна отражать продуктовую навигацию приложения.
+Структура слоя свободна и отражает продуктовую навигацию приложения.
 
 ```text
 compositions/
@@ -34,41 +34,29 @@ compositions/
 
 Эти папки являются groups, а не отдельными слоями.
 
-## Cross-domain graph
+## Product ownership
 
-**SLM-CMP-001 - ОБЯЗАН.** Runtime graph нескольких domains должен собираться в composition, которая владеет его scope.
+**SLM-CMP-001 - ОБЯЗАН.** Product flow и его локальная product logic должны принадлежать минимальной composition, охватывающей всех consumers этой ответственности.
 
-```ts
-const auth = createAuthRuntime()
-const user = createUserRuntime({ auth: auth.session })
-const orders = createOrdersRuntime({ user: user.agreements })
-```
+Composition может использовать public API `infra` для external operations, сохраняя product mapping, outcomes и fallback semantics у себя.
 
-**SLM-CMP-002 - ОБЯЗАН.** Composition должна создавать domain runtimes в явном ацикличном порядке.
+## Public boundaries
 
-**SLM-CMP-003 - ОБЯЗАН.** Cross-domain dependency должна передаваться как готовая минимальная capability, а не разрешаться service locator или domain import.
-
-**SLM-CMP-004 - ЗАПРЕЩЕНО.** Composition не может повторять adapter wiring, если domain public assembly уже создаёт готовый runtime.
-
-**SLM-CMP-005 - ЗАПРЕЩЕНО.** Composition не должна импортировать private business services, domain adapters, SDK-specific domain integration или внутренний Context domain.
-
-**SLM-CMP-013 - ОБЯЗАН.** Composition должна использовать public client/server creator domain, если domain предоставляет runtime-specific assembly.
-
-**SLM-CMP-014 - МОЖЕТ.** Composition может вызвать public business factory напрямую только для полностью universal domain без concrete adapters и runtime-specific assembly.
+**SLM-CMP-005 - ЗАПРЕЩЕНО.** Composition не может импортировать private services, integrations, stores, Context или другие internal paths используемого module.
 
 ## Product UI
 
-**SLM-CMP-006 - ОБЯЗАН.** UI, объединяющий несколько domains, route/page scope или application flow, принадлежит `compositions`.
+**SLM-CMP-006 - ОБЯЗАН.** UI, объединяющий несколько самостоятельных modules, route/page scope либо application flow, принадлежит `compositions`.
 
 Примеры:
 
-- header, объединяющий auth, cart и navigation;
-- order flow, который требует auth и user agreements;
+- application header;
+- order flow, объединяющий несколько product responsibilities;
 - page screen;
 - route guard с navigation outcome;
-- widget, использующий hooks двух domains.
+- widget, использующий public APIs двух самостоятельных modules.
 
-**SLM-CMP-007 - МОЖЕТ.** Composition может использовать domain UI и universal UI, передавать им props, callbacks и slots.
+**SLM-CMP-007 - МОЖЕТ.** Composition может использовать product UI, опубликованный другими modules, и universal UI, передавая props, callbacks и slots.
 
 ## State
 
@@ -82,15 +70,13 @@ const orders = createOrdersRuntime({ user: user.agreements })
 - presentation filters;
 - состояние раскрытия section.
 
-**SLM-CMP-009 - ЗАПРЕЩЕНО.** Page store не может становиться параллельным владельцем domain model или product cache.
+**SLM-CMP-009 - ЗАПРЕЩЕНО.** Page store не может становиться параллельным владельцем product model или canonical product cache другого owner.
 
 ## Imports
 
-**SLM-CMP-010 - МОЖЕТ.** Composition module может импортировать public API других composition modules, domains, infra, ui и shared.
+**SLM-CMP-010 - МОЖЕТ.** Composition module может импортировать public API других composition modules, infra, ui и shared.
 
-**SLM-CMP-011 - ЗАПРЕЩЕНО.** Runtime-циклы между composition modules запрещены.
-
-**SLM-CMP-012 - ОБЯЗАН.** App-specific graph type должен отражать только реально предоставленные runtimes; `Partial<Graph>` с последующим приведением к полному graph запрещён.
+Runtime-циклы между composition modules запрещены base-правилом `SLM-API-016`.
 
 **SLM-CMP-015 - ОБЯЗАН.** Client и server composition entries должны иметь раздельные public entrypoints и environment markers, если composition участвует в обоих runtime graphs.
 

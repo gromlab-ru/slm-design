@@ -8,6 +8,8 @@
 
 [SLM Design Specification](./specification/index.md)
 
+Specification определяет base SLM и два независимых [architecture modes](./specification/architecture-modes.md): `SLM Advanced` и `SLM Pro`. Каждый mode является отдельным overlay непосредственно над base SLM.
+
 ## Границы текущего этапа
 
 На этом этапе в `docs2/` размещается только нормативная спецификация. Учебные материалы, руководства, примеры, справочники и agent skill будут проектироваться после стабилизации правил.

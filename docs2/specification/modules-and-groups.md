@@ -19,7 +19,6 @@ Module является минимальным самостоятельным в
 Типичные modules:
 
 - page, layout, screen или widget в `compositions`;
-- конечный domain в `domains`;
 - technical service в `infra`;
 - reusable UI module в `ui`.
 
@@ -36,30 +35,17 @@ Group классифицирует modules и другие groups, но не в�
 **SLM-MOD-006 - МОЖЕТ.** Group может содержать другие groups и конечные modules.
 
 ```text
-domains/
-└── knv/                 # group
-    ├── auth/            # domain module
-    └── orders/          # domain module
-```
-
-```text
 compositions/
 └── pages/               # group
     ├── home/            # composition module
     └── profile/         # composition module
 ```
 
-## Domain zones
-
-**SLM-MOD-007 - ОБЯЗАН.** `business`, `react`, `adapters`, `client` и `server` внутри конечного domain являются внутренними zones одного domain, а не самостоятельными верхнеуровневыми modules.
-
-Zones могут иметь собственные entrypoints, но domain остаётся единым владельцем product responsibility.
-
 ## Component
 
 Component является presentation unit внутри module и не считается самостоятельным архитектурным owner.
 
-**SLM-MOD-008 - ЗАПРЕЩЕНО.** Component не может самостоятельно выбирать product source, собирать domain runtime или оркестрировать несколько modules.
+**SLM-MOD-008 - ЗАПРЕЩЕНО.** Component не может самостоятельно выбирать application-level product source, выполнять module wiring или оркестрировать несколько самостоятельных modules.
 
 **SLM-MOD-009 - МОЖЕТ.** Component может владеть локальной presentation mechanics и рендерить другие components, разрешённые слоем владельца.
 
@@ -77,7 +63,7 @@ compositions/pages/home/
         └── index.ts
 ```
 
-**SLM-MOD-011 - ЗАПРЕЩЕНО.** Nested module не может использоваться для сокрытия ответственности, которой фактически владеет другой слой или domain.
+**SLM-MOD-011 - ЗАПРЕЩЕНО.** Nested module не может использоваться для сокрытия ответственности, которой фактически владеет другой module или layer.
 
 ## Scope evolution
 

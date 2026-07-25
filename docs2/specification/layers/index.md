@@ -12,16 +12,15 @@ normative: true
 
 | Слой | Владеет | Не владеет |
 |---|---|---|
-| [`app`](./app.md) | Framework routes, bootstrap, глобальные framework boundaries | Product UI, domain logic, page state, graph assembly |
-| [`compositions`](./compositions.md) | Pages, layouts, screens, widgets, cross-domain graph, scope | Domain model, domain adapters, universal UI primitives |
-| [`domains`](./domains/index.md) | Product model, scenarios, ports, adapters, runtime surfaces | Route/page composition и UI нескольких domains |
-| [`infra`](./infra.md) | Technical services, transports, platform integrations | Product semantics и domain graph |
+| [`app`](./app.md) | Framework routes, bootstrap, глобальные framework boundaries | Product UI, product logic, page state, application wiring |
+| [`compositions`](./compositions.md) | Pages, layouts, screens, widgets, product flows, application wiring и scope | Universal UI primitives, technical transports |
+| [`infra`](./infra.md) | Technical services, transports, platform integrations | Product semantics и application wiring |
 | [`ui`](./ui.md) | Product-agnostic UI modules | Product scenarios и data sources |
 | [`shared`](./shared.md) | Детерминированные общие resources | Runtime state, I/O и product knowledge |
 
 ## Общие правила
 
-**SLM-LAY-001 - ОБЯЗАН.** Модуль должен располагаться в слое, который владеет его основной ответственностью.
+**SLM-LAY-001 - ОБЯЗАН.** Module должен располагаться в слое, который владеет его основной ответственностью.
 
 **SLM-LAY-002 - ЗАПРЕЩЕНО.** Нельзя выбирать слой по техническому типу файла без определения владельца поведения и данных.
 
@@ -29,15 +28,17 @@ normative: true
 
 **SLM-LAY-004 - ЗАПРЕЩЕНО.** Нельзя создавать proxy module в разрешённом слое только для обхода запрещённого направления import.
 
-**SLM-LAY-005 - СЛЕДУЕТ.** При смешанной ответственности module следует разделить по реальным владельцам. Cross-module и cross-domain orchestration следует выполнить в `compositions`; связь business с собственными adapters выполняется assembly соответствующего domain.
+**SLM-LAY-005 - СЛЕДУЕТ.** При смешанной ответственности module следует разделить по реальным владельцам. Application flow и UI нескольких самостоятельных modules следует собирать в `compositions`.
 
 ## Выбор слоя
 
 | Вопрос | Слой |
 |---|---|
 | Код существует только из-за framework route/bootstrap? | `app` |
-| Код собирает page, route, несколько modules или domains? | `compositions` |
-| Код выражает продуктовую модель, сценарий или domain UI? | `domains` |
-| Код предоставляет техническую capability приложения? | `infra` |
-| Компонент не содержит product semantics и сценария? | `ui` |
+| Код собирает page, route или несколько самостоятельных modules? | `compositions` |
+| Код выражает product flow или product responsibility без owner, введённого overlay? | `compositions` |
+| Код предоставляет technical capability приложения? | `infra` |
+| Компонент не содержит product semantics и scenario? | `ui` |
 | Код детерминирован, не знает продукт и не имеет runtime state? | `shared` |
+
+Overlay может добавлять собственный слой и изменять ownership только в явно объявленном delta.

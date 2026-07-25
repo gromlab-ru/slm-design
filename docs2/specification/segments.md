@@ -6,7 +6,7 @@ normative: true
 
 # Сегменты
 
-Segment группирует внутренние файлы module по устойчивой роли. Segment не является самостоятельным layer, module или domain.
+Segment группирует внутренние файлы module по устойчивой роли. Segment не является самостоятельным layer или module.
 
 ## Базовые segments
 
@@ -31,11 +31,11 @@ Segment группирует внутренние файлы module по уст�
 
 **SLM-SEG-002 - ЗАПРЕЩЕНО.** Нельзя создавать полный симметричный набор segments как scaffold без реального содержимого.
 
-**SLM-SEG-003 - ОБЯЗАН.** Файл должен размещаться в segment согласно своей фактической роли, а не только расширению или имени.
+**SLM-SEG-003 - ОБЯЗАН.** Если файл помещён в segment, роль segment должна соответствовать фактической роли файла, а не только его расширению или имени. Файлы могут оставаться в корне небольшого module.
 
 **SLM-SEG-004 - ЗАПРЕЩЕНО.** Segment не имеет внешнего public API независимо от module owner.
 
-**SLM-SEG-005 - ЗАПРЕЩЕНО.** Нельзя импортировать segment другого module через deep path.
+Запрет deep import в segment другого module определяется base-правилом `SLM-API-002`.
 
 ## UI и Parts
 
@@ -51,25 +51,9 @@ Segment группирует внутренние файлы module по уст�
 
 Примеры:
 
-- domain hook - `domains/{domain}/react/hooks`;
+- product hook - владеющий product module;
 - page-local hook - владеющая page composition;
 - reusable technical hook - соответствующий infra module;
 - product-agnostic UI hook - владеющий UI module.
 
-## Domain zones и segments
-
-**SLM-SEG-008 - ЗАПРЕЩЕНО.** Domain zones `business`, `react`, `adapters`, `client`, `server` нельзя трактовать как взаимозаменяемые generic segments.
-
-Внутри zone могут существовать обычные segments:
-
-```text
-domain/
-├── business/
-│   ├── services/
-│   ├── types/
-│   └── mappers/
-└── react/
-    ├── hooks/
-    ├── providers/
-    └── ui/
-```
+Segments являются только внутренними организационными ролями и не вводят дополнительных архитектурных zones.

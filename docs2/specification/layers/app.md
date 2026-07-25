@@ -28,17 +28,17 @@ framework route
   → composition entry
 ```
 
-**SLM-APP-002 - ЗАПРЕЩЕНО.** `app` не может владеть product page, screen, widget, domain scenario, store, domain Provider или cross-domain graph.
+**SLM-APP-002 - ЗАПРЕЩЕНО.** `app` не может владеть product page, screen, widget, product scenario, store или application wiring.
 
-**SLM-APP-003 - ЗАПРЕЩЕНО.** Route entry не должен напрямую собирать domain adapters, вызывать SDK или формировать product model.
+**SLM-APP-003 - ЗАПРЕЩЕНО.** Route entry не должен напрямую собирать product integrations, вызывать SDK или формировать product model.
 
 **SLM-APP-004 - ОБЯЗАН.** Framework-specific input должен быть считан в `app` и передан вниз в минимальной нормализованной форме.
 
-Механическая нормализация включает извлечение route params, headers и framework wrappers. Product validation, создание value objects и выбор domain outcome остаются в domain business.
+Механическая нормализация включает извлечение route params, headers и framework wrappers. Product validation, создание value objects и выбор product outcome остаются у владельца product semantics.
 
-**SLM-APP-005 - ЗАПРЕЩЕНО.** Другие SLM-слои не могут импортировать `app`.
+Запрет другим SLM-слоям импортировать `app` определяется base-правилом `SLM-ARCH-003`.
 
-**SLM-APP-006 - СЛЕДУЕТ.** Framework behavior, которому нужен product graph или product UI, следует реализовать готовым composition entry и только подключить из `app`.
+**SLM-APP-006 - СЛЕДУЕТ.** Framework behavior, которому нужны product dependencies или product UI, следует реализовать готовым composition entry и только подключить из `app`.
 
 **SLM-APP-007 - МОЖЕТ.** `app` может напрямую импортировать framework APIs и static/global resources из `shared`, если framework требует подключить их в root entry.
 
@@ -57,14 +57,14 @@ app/
         └── page.tsx
 ```
 
-## Недопустимые владельцы
+## Примеры нарушений
 
-Следующие сущности не должны определяться в `app`:
+Следующие сущности являются примерами нарушений `SLM-APP-002` и `SLM-APP-003`:
 
 - `ProductPage`;
-- `AuthProvider`;
-- `createOrdersRuntime`;
+- product Provider;
+- application service creator;
 - page-local store;
-- domain mapper;
+- product mapper;
 - reusable product component;
-- concrete product adapter.
+- concrete product integration.

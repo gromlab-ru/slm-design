@@ -6,7 +6,7 @@ normative: true
 
 # Слой Infra
 
-`infra` содержит технические capabilities приложения, не определяющие продуктовую модель и сценарии.
+`infra` содержит technical capabilities приложения, не определяющие product model и scenarios.
 
 ## Примеры modules
 
@@ -25,23 +25,23 @@ infra/
 
 ## Правила
 
-**SLM-INF-001 - ОБЯЗАН.** Infra module должен описывать техническую capability, а не продуктовый domain.
+**SLM-INF-001 - ОБЯЗАН.** Infra module должен описывать technical capability, а не product semantics или scenario.
 
 **SLM-INF-002 - МОЖЕТ.** Infra module может импортировать public API другого infra module и `shared`.
 
-**SLM-INF-003 - ЗАПРЕЩЕНО.** Infra module не может импортировать `domains`, `compositions` или `app`.
+Запрет infra импортировать `compositions` или `app` определяется base-правилом `SLM-ARCH-003`.
 
-**SLM-INF-004 - ЗАПРЕЩЕНО.** Infra не может собирать domain factory, хранить cross-domain graph или предоставлять generic product service locator.
+**SLM-INF-004 - ЗАПРЕЩЕНО.** Infra не может владеть product wiring, собирать application graph или предоставлять generic product service locator.
 
-**SLM-INF-005 - ЗАПРЕЩЕНО.** Infra не создаёт domain errors, domain fallback и domain model из transport DTO.
+**SLM-INF-005 - ЗАПРЕЩЕНО.** Infra не создаёт product errors, product fallback и product model из transport DTO.
 
 **SLM-INF-006 - МОЖЕТ.** Infra может экспортировать technical client, transport, event source, storage primitive или platform wrapper через собственный public API.
 
-**SLM-INF-007 - ОБЯЗАН.** Generated SDK и transport details должны оставаться внутри infra или concrete domain adapter и не становиться public contract продуктовых consumers.
+**SLM-INF-007 - ОБЯЗАН.** Generated SDK и transport details должны оставаться внутри technical или private integration boundary владельца и не становиться частью public product contract.
 
-## Отличие от adapter
+## Product integration
 
-Infra знает технический механизм:
+Infra знает technical mechanism:
 
 ```text
 HTTP client
@@ -50,12 +50,4 @@ local storage primitive
 analytics SDK
 ```
 
-Domain adapter знает, какая часть этого механизма реализует конкретный business-owned port:
-
-```text
-AuthPhonePort
-OrdersEventsPort
-UserAgreementsStoragePort
-```
-
-Один infra module может использоваться adapters нескольких domains без знания их product semantics.
+Product owner определяет semantics использования capability; infra предоставляет механизм через public API. Один infra module может использоваться несколькими product owners без знания их semantics.
