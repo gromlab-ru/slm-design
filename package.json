@@ -5,10 +5,20 @@
   "scripts": {
     "build": "npm run build:skill",
     "build:skill": "node scripts/build-skill.mjs",
-    "check": "npm run build && npm run check:skill",
-    "check:skill": "node scripts/check-skill.mjs"
+    "check": "npm run build && npm run check:skill && npm run check:docs-all",
+    "check:skill": "node scripts/check-skill.mjs",
+    "check:docs": "node scripts/check-docs.mjs",
+    "check:docs-search": "node scripts/check-docs-search.mjs",
+    "check:docs-all": "npm run check:docs && npm run docs:build && npm run check:docs-search",
+    "docs:dev": "vitepress dev site",
+    "docs:build": "vitepress build site",
+    "docs:preview": "vitepress preview site"
   },
   "engines": {
     "node": ">=20"
+  },
+  "devDependencies": {
+    "minisearch": "7.2.0",
+    "vitepress": "1.6.4"
   }
 }

@@ -4,7 +4,9 @@
 
 ## Структура
 
-- `docs/` — исходная документация и спецификация SLM Design.
+- `docs/` — новый нормативный корпус и материалы сайта.
+- `old-docs/` — действующая legacy-документация для текущего skill.
+- `site/` — VitePress-конфигурация, тема и статические ресурсы.
 - `src-skills/` — исходники agent skills.
 - `skills/` — собранные skills для установки через `npx skills`.
 
@@ -17,7 +19,7 @@ npm run build
 npm run check
 ```
 
-`npm run build` пересобирает `skills/slm-design/` из `docs/` и `src-skills/slm-design/`. Не редактируй собранные файлы вручную.
+`npm run build` пересобирает текущий `skills/slm-design/` из `old-docs/` и `src-skills/slm-design/`. Не редактируй собранные файлы вручную.
 
 ## Установка
 

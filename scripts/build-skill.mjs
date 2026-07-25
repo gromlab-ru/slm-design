@@ -6,7 +6,7 @@ import skillConfig from '../src-skills/slm-design/skill.config.mjs';
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const sourceDir = path.join(repoRoot, 'src-skills', skillConfig.name);
 const sourcePath = path.join(sourceDir, skillConfig.source);
-const docsDir = path.join(repoRoot, 'docs');
+const legacyDocsDir = path.join(repoRoot, 'old-docs');
 const outputDir = path.join(repoRoot, 'skills', skillConfig.name);
 const includePattern = /<!--\s*include:\s*(.*?)\s*-->/g;
 
@@ -50,8 +50,8 @@ if (!fs.existsSync(sourcePath)) {
   throw new Error(`Skill source not found: ${path.relative(repoRoot, sourcePath)}`);
 }
 
-if (!fs.existsSync(docsDir)) {
-  throw new Error('Documentation directory not found: docs');
+if (!fs.existsSync(legacyDocsDir)) {
+  throw new Error('Legacy documentation directory not found: old-docs');
 }
 
 const source = fs.readFileSync(sourcePath, 'utf8');
@@ -65,6 +65,6 @@ const output = [
 fs.rmSync(outputDir, { recursive: true, force: true });
 fs.mkdirSync(outputDir, { recursive: true });
 fs.writeFileSync(path.join(outputDir, 'SKILL.md'), `${output}\n`);
-fs.cpSync(docsDir, path.join(outputDir, 'reference'), { recursive: true });
+fs.cpSync(legacyDocsDir, path.join(outputDir, 'reference'), { recursive: true });
 
 console.log(path.relative(repoRoot, path.join(outputDir, 'SKILL.md')));
