@@ -1,18 +1,15 @@
-# SLM Design 2.0 Draft
+# Сайт SLM Design
 
-`site/` содержит VitePress-конфигурацию, тему и статические ресурсы сайта SLM Design.
+`site/` содержит конфигурацию, тему и статические ресурсы VitePress.
 
-Новый publishable corpus находится в `docs/`. Действующая legacy-документация и reference текущего skill находятся в `old-docs/` до отдельного решения о принятии новой спецификации.
+Источником опубликованной документации служит [`DRAFT`](../DRAFT/index.md). Сайт включает только Level 1 и его правила; каталог `DRAFT/domains` исключён из маршрутов и поиска.
 
-## Точка входа
+## Маршруты
 
-[SLM Design Specification](../docs/ru/specification/index.md)
-
-Specification определяет base SLM и два независимых [architecture modes](../docs/ru/specification/architecture-modes.md): `SLM Advanced` и `SLM Pro`. Каждый mode является отдельным overlay непосредственно над base SLM.
-
-## Границы текущего этапа
-
-На этом этапе в `docs/ru/specification/` размещается только нормативная русская спецификация. Английский раздел зарезервирован под будущий перевод. Учебные материалы, руководства, примеры, справочники и agent skill будут проектироваться после стабилизации правил.
+- `/` - главная страница;
+- `/level-1/` - документация Level 1;
+- `/rules/` - устройство правил;
+- `/rules/level-1` - канонический реестр Level 1.
 
 ## Локальный запуск
 
@@ -20,4 +17,10 @@ Specification определяет base SLM и два независимых [ar
 npm run docs:dev
 ```
 
-Production build создаётся командой `npm run docs:build`.
+## Проверка
+
+```bash
+npm run check:site
+```
+
+Команда проверяет реестр правил, собирает VitePress и проверяет опубликованные маршруты и якоря правил.

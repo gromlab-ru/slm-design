@@ -1,0 +1,2677 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/api/v1/health": {
+      "get": {
+        "operationId": "SimpleHealth_health",
+        "parameters": [
+          {
+            "name": "X-Demo-Scenario",
+            "in": "header",
+            "description": "Forces a deterministic frontend-testing scenario for this request.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "normal",
+                "slow",
+                "timeout",
+                "server-error",
+                "rate-limited",
+                "empty",
+                "expired-auth",
+                "forbidden",
+                "conflict",
+                "large-dataset"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Check Simple API availability",
+        "tags": [
+          "Health"
+        ]
+      }
+    },
+    "/api/v1/auth/login": {
+      "post": {
+        "operationId": "SimpleAuth_login",
+        "parameters": [
+          {
+            "name": "X-Demo-Scenario",
+            "in": "header",
+            "description": "Forces a deterministic frontend-testing scenario for this request.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "normal",
+                "slow",
+                "timeout",
+                "server-error",
+                "rate-limited",
+                "empty",
+                "expired-auth",
+                "forbidden",
+                "conflict",
+                "large-dataset"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JwtAuthResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request or validation error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Demo rate limit scenario.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected or simulated server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Login and receive JWT access/refresh tokens",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/v1/auth/refresh": {
+      "post": {
+        "operationId": "SimpleAuth_refresh",
+        "parameters": [
+          {
+            "name": "X-Demo-Scenario",
+            "in": "header",
+            "description": "Forces a deterministic frontend-testing scenario for this request.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "normal",
+                "slow",
+                "timeout",
+                "server-error",
+                "rate-limited",
+                "empty",
+                "expired-auth",
+                "forbidden",
+                "conflict",
+                "large-dataset"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshTokenDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JwtAuthResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request or validation error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication is missing or expired.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The current user lacks permission.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Demo rate limit scenario.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected or simulated server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Rotate a refresh token and issue a new token pair",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/v1/auth/logout": {
+      "post": {
+        "operationId": "SimpleAuth_logout",
+        "parameters": [
+          {
+            "name": "X-Demo-Scenario",
+            "in": "header",
+            "description": "Forces a deterministic frontend-testing scenario for this request.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "normal",
+                "slow",
+                "timeout",
+                "server-error",
+                "rate-limited",
+                "empty",
+                "expired-auth",
+                "forbidden",
+                "conflict",
+                "large-dataset"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshTokenDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "400": {
+            "description": "Invalid request or validation error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Demo rate limit scenario.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected or simulated server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Revoke a refresh token; the operation is idempotent",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/v1/users/me": {
+      "get": {
+        "operationId": "SimpleUsers_me",
+        "parameters": [
+          {
+            "name": "X-Demo-Scenario",
+            "in": "header",
+            "description": "Forces a deterministic frontend-testing scenario for this request.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "normal",
+                "slow",
+                "timeout",
+                "server-error",
+                "rate-limited",
+                "empty",
+                "expired-auth",
+                "forbidden",
+                "conflict",
+                "large-dataset"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SimpleUserResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request or validation error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication is missing or expired.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The current user lacks permission.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Demo rate limit scenario.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected or simulated server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jwt": []
+          }
+        ],
+        "summary": "Get the authenticated user",
+        "tags": [
+          "Users"
+        ]
+      }
+    },
+    "/api/v1/products": {
+      "get": {
+        "operationId": "SimpleProducts_list",
+        "parameters": [
+          {
+            "name": "X-Demo-Scenario",
+            "in": "header",
+            "description": "Forces a deterministic frontend-testing scenario for this request.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "normal",
+                "slow",
+                "timeout",
+                "server-error",
+                "rate-limited",
+                "empty",
+                "expired-auth",
+                "forbidden",
+                "conflict",
+                "large-dataset"
+              ]
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/Object"
+                }
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/Object"
+                }
+              ]
+            }
+          },
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": "keyboard",
+              "type": "string"
+            }
+          },
+          {
+            "name": "categoryId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": "category-electronics",
+              "type": "string"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "newest",
+              "type": "string",
+              "enum": [
+                "newest",
+                "price-asc",
+                "price-desc",
+                "name"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductsResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request or validation error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Demo rate limit scenario.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected or simulated server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "List products using offset pagination, filters and sorting",
+        "tags": [
+          "Products"
+        ]
+      },
+      "post": {
+        "operationId": "SimpleProducts_create",
+        "parameters": [
+          {
+            "name": "X-Demo-Scenario",
+            "in": "header",
+            "description": "Forces a deterministic frontend-testing scenario for this request.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "normal",
+                "slow",
+                "timeout",
+                "server-error",
+                "rate-limited",
+                "empty",
+                "expired-auth",
+                "forbidden",
+                "conflict",
+                "large-dataset"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateProductDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request or validation error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication is missing or expired.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The current user lacks permission.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Demo rate limit scenario.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected or simulated server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jwt": []
+          }
+        ],
+        "summary": "Create a product as an administrator",
+        "tags": [
+          "Products"
+        ]
+      }
+    },
+    "/api/v1/products/{id}": {
+      "get": {
+        "operationId": "SimpleProducts_get",
+        "parameters": [
+          {
+            "name": "X-Demo-Scenario",
+            "in": "header",
+            "description": "Forces a deterministic frontend-testing scenario for this request.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "normal",
+                "slow",
+                "timeout",
+                "server-error",
+                "rate-limited",
+                "empty",
+                "expired-auth",
+                "forbidden",
+                "conflict",
+                "large-dataset"
+              ]
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductResponseDto"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "The supplied If-None-Match value is current."
+          },
+          "400": {
+            "description": "Invalid request or validation error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The requested resource does not exist.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Demo rate limit scenario.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected or simulated server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Get one product with ETag support",
+        "tags": [
+          "Products"
+        ]
+      },
+      "patch": {
+        "operationId": "SimpleProducts_update",
+        "parameters": [
+          {
+            "name": "X-Demo-Scenario",
+            "in": "header",
+            "description": "Forces a deterministic frontend-testing scenario for this request.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "normal",
+                "slow",
+                "timeout",
+                "server-error",
+                "rate-limited",
+                "empty",
+                "expired-auth",
+                "forbidden",
+                "conflict",
+                "large-dataset"
+              ]
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProductDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request or validation error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication is missing or expired.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The current user lacks permission.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The requested resource does not exist.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Business or optimistic-lock conflict.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Demo rate limit scenario.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected or simulated server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jwt": []
+          }
+        ],
+        "summary": "Update a product using optimistic locking",
+        "tags": [
+          "Products"
+        ]
+      },
+      "delete": {
+        "operationId": "SimpleProducts_remove",
+        "parameters": [
+          {
+            "name": "X-Demo-Scenario",
+            "in": "header",
+            "description": "Forces a deterministic frontend-testing scenario for this request.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "normal",
+                "slow",
+                "timeout",
+                "server-error",
+                "rate-limited",
+                "empty",
+                "expired-auth",
+                "forbidden",
+                "conflict",
+                "large-dataset"
+              ]
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MutationResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request or validation error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication is missing or expired.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The current user lacks permission.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The requested resource does not exist.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Demo rate limit scenario.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected or simulated server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jwt": []
+          }
+        ],
+        "summary": "Delete a product as an administrator",
+        "tags": [
+          "Products"
+        ]
+      }
+    },
+    "/api/v1/categories": {
+      "get": {
+        "operationId": "SimpleCategories_list",
+        "parameters": [
+          {
+            "name": "X-Demo-Scenario",
+            "in": "header",
+            "description": "Forces a deterministic frontend-testing scenario for this request.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "normal",
+                "slow",
+                "timeout",
+                "server-error",
+                "rate-limited",
+                "empty",
+                "expired-auth",
+                "forbidden",
+                "conflict",
+                "large-dataset"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategoriesResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "List product categories",
+        "tags": [
+          "Categories"
+        ]
+      }
+    },
+    "/api/v1/categories/{id}": {
+      "get": {
+        "operationId": "SimpleCategories_get",
+        "parameters": [
+          {
+            "name": "X-Demo-Scenario",
+            "in": "header",
+            "description": "Forces a deterministic frontend-testing scenario for this request.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "normal",
+                "slow",
+                "timeout",
+                "server-error",
+                "rate-limited",
+                "empty",
+                "expired-auth",
+                "forbidden",
+                "conflict",
+                "large-dataset"
+              ]
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategoryResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request or validation error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The requested resource does not exist.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Demo rate limit scenario.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected or simulated server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Get one category",
+        "tags": [
+          "Categories"
+        ]
+      }
+    },
+    "/api/v1/orders": {
+      "get": {
+        "operationId": "SimpleOrders_list",
+        "parameters": [
+          {
+            "name": "X-Demo-Scenario",
+            "in": "header",
+            "description": "Forces a deterministic frontend-testing scenario for this request.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "normal",
+                "slow",
+                "timeout",
+                "server-error",
+                "rate-limited",
+                "empty",
+                "expired-auth",
+                "forbidden",
+                "conflict",
+                "large-dataset"
+              ]
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/Object"
+                }
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/Object"
+                }
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrdersResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request or validation error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication is missing or expired.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The current user lacks permission.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Demo rate limit scenario.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected or simulated server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jwt": []
+          }
+        ],
+        "summary": "List orders visible to the current user",
+        "tags": [
+          "Orders"
+        ]
+      },
+      "post": {
+        "operationId": "SimpleOrders_create",
+        "parameters": [
+          {
+            "name": "X-Demo-Scenario",
+            "in": "header",
+            "description": "Forces a deterministic frontend-testing scenario for this request.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "normal",
+                "slow",
+                "timeout",
+                "server-error",
+                "rate-limited",
+                "empty",
+                "expired-auth",
+                "forbidden",
+                "conflict",
+                "large-dataset"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateOrderDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request or validation error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication is missing or expired.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The current user lacks permission.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Business or optimistic-lock conflict.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Demo rate limit scenario.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected or simulated server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jwt": []
+          }
+        ],
+        "summary": "Create an order and validate product stock",
+        "tags": [
+          "Orders"
+        ]
+      }
+    },
+    "/api/v1/orders/{id}": {
+      "get": {
+        "operationId": "SimpleOrders_get",
+        "parameters": [
+          {
+            "name": "X-Demo-Scenario",
+            "in": "header",
+            "description": "Forces a deterministic frontend-testing scenario for this request.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "normal",
+                "slow",
+                "timeout",
+                "server-error",
+                "rate-limited",
+                "empty",
+                "expired-auth",
+                "forbidden",
+                "conflict",
+                "large-dataset"
+              ]
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request or validation error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication is missing or expired.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The current user lacks permission.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The requested resource does not exist.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Demo rate limit scenario.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected or simulated server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jwt": []
+          }
+        ],
+        "summary": "Get one visible order",
+        "tags": [
+          "Orders"
+        ]
+      }
+    },
+    "/api/v1/orders/{id}/cancel": {
+      "post": {
+        "operationId": "SimpleOrders_cancel",
+        "parameters": [
+          {
+            "name": "X-Demo-Scenario",
+            "in": "header",
+            "description": "Forces a deterministic frontend-testing scenario for this request.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "normal",
+                "slow",
+                "timeout",
+                "server-error",
+                "rate-limited",
+                "empty",
+                "expired-auth",
+                "forbidden",
+                "conflict",
+                "large-dataset"
+              ]
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request or validation error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication is missing or expired.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The current user lacks permission.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The requested resource does not exist.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Business or optimistic-lock conflict.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Demo rate limit scenario.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected or simulated server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jwt": []
+          }
+        ],
+        "summary": "Cancel an order if its state permits the transition",
+        "tags": [
+          "Orders"
+        ]
+      }
+    },
+    "/api/v1/testing/scenarios": {
+      "get": {
+        "operationId": "SimpleTesting_scenarios",
+        "parameters": [
+          {
+            "name": "X-Demo-Scenario",
+            "in": "header",
+            "description": "Forces a deterministic frontend-testing scenario for this request.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "normal",
+                "slow",
+                "timeout",
+                "server-error",
+                "rate-limited",
+                "empty",
+                "expired-auth",
+                "forbidden",
+                "conflict",
+                "large-dataset"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScenariosResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "List deterministic X-Demo-Scenario values",
+        "tags": [
+          "Testing"
+        ]
+      }
+    },
+    "/api/v1/testing/reset": {
+      "post": {
+        "operationId": "SimpleTesting_reset",
+        "parameters": [
+          {
+            "name": "X-Demo-Scenario",
+            "in": "header",
+            "description": "Forces a deterministic frontend-testing scenario for this request.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "normal",
+                "slow",
+                "timeout",
+                "server-error",
+                "rate-limited",
+                "empty",
+                "expired-auth",
+                "forbidden",
+                "conflict",
+                "large-dataset"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestingActionResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Reset all Simple API state and token revocations",
+        "tags": [
+          "Testing"
+        ]
+      }
+    },
+    "/api/v1/testing/seed/{preset}": {
+      "post": {
+        "operationId": "SimpleTesting_seed",
+        "parameters": [
+          {
+            "name": "X-Demo-Scenario",
+            "in": "header",
+            "description": "Forces a deterministic frontend-testing scenario for this request.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "normal",
+                "slow",
+                "timeout",
+                "server-error",
+                "rate-limited",
+                "empty",
+                "expired-auth",
+                "forbidden",
+                "conflict",
+                "large-dataset"
+              ]
+            }
+          },
+          {
+            "name": "preset",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "enum": [
+                "small",
+                "large"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestingActionResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Select a small or large deterministic dataset",
+        "tags": [
+          "Testing"
+        ]
+      }
+    },
+    "/api/v1/testing/users/{userId}/role": {
+      "post": {
+        "operationId": "SimpleTesting_changeRole",
+        "parameters": [
+          {
+            "name": "X-Demo-Scenario",
+            "in": "header",
+            "description": "Forces a deterministic frontend-testing scenario for this request.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "normal",
+                "slow",
+                "timeout",
+                "server-error",
+                "rate-limited",
+                "empty",
+                "expired-auth",
+                "forbidden",
+                "conflict",
+                "large-dataset"
+              ]
+            }
+          },
+          {
+            "name": "userId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangeSimpleRoleDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SimpleUserResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request or validation error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The requested resource does not exist.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Demo rate limit scenario.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected or simulated server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Change a user role to exercise dynamic access control",
+        "tags": [
+          "Testing"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "Demo Simple API",
+    "description": "JWT-based API for landing pages and medium frontend applications.",
+    "version": "1.0.0",
+    "contact": {}
+  },
+  "tags": [],
+  "servers": [
+    {
+      "url": "http://localhost:3001",
+      "description": "Local development"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "jwt": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http"
+      }
+    },
+    "schemas": {
+      "HealthDataDto": {
+        "type": "object",
+        "properties": {
+          "application": {
+            "type": "string",
+            "enum": [
+              "simple",
+              "complex"
+            ],
+            "example": "simple"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok"
+            ],
+            "example": "ok"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "version": {
+            "type": "string",
+            "example": "1.0.0"
+          }
+        },
+        "required": [
+          "application",
+          "status",
+          "timestamp",
+          "version"
+        ]
+      },
+      "HealthResponseDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/HealthDataDto"
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "LoginDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "admin@demo.local"
+          },
+          "password": {
+            "type": "string",
+            "format": "password",
+            "example": "demo1234",
+            "minLength": 8
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ]
+      },
+      "JwtTokensDto": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string"
+          },
+          "refreshToken": {
+            "type": "string"
+          },
+          "expiresIn": {
+            "type": "number",
+            "example": 60,
+            "description": "Access-token lifetime in seconds."
+          },
+          "tokenType": {
+            "type": "string",
+            "enum": [
+              "Bearer"
+            ],
+            "example": "Bearer"
+          }
+        },
+        "required": [
+          "accessToken",
+          "refreshToken",
+          "expiresIn",
+          "tokenType"
+        ]
+      },
+      "SimpleUserDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "user-admin"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "admin@demo.local"
+          },
+          "name": {
+            "type": "string",
+            "example": "Demo Admin"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "admin",
+              "customer"
+            ]
+          },
+          "avatarUrl": {
+            "type": "object",
+            "nullable": true,
+            "example": "https://i.pravatar.cc/160?img=12"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "name",
+          "role",
+          "avatarUrl"
+        ]
+      },
+      "JwtAuthDataDto": {
+        "type": "object",
+        "properties": {
+          "tokens": {
+            "$ref": "#/components/schemas/JwtTokensDto"
+          },
+          "user": {
+            "$ref": "#/components/schemas/SimpleUserDto"
+          }
+        },
+        "required": [
+          "tokens",
+          "user"
+        ]
+      },
+      "JwtAuthResponseDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/JwtAuthDataDto"
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "ErrorDetailDto": {
+        "type": "object",
+        "properties": {
+          "field": {
+            "type": "string",
+            "example": "email"
+          },
+          "message": {
+            "type": "string",
+            "example": "must be an email"
+          },
+          "code": {
+            "type": "string",
+            "example": "isEmail"
+          }
+        },
+        "required": [
+          "message"
+        ]
+      },
+      "ErrorResponseDto": {
+        "type": "object",
+        "properties": {
+          "statusCode": {
+            "type": "number",
+            "example": 404
+          },
+          "code": {
+            "type": "string",
+            "example": "PRODUCT_NOT_FOUND"
+          },
+          "message": {
+            "type": "string",
+            "example": "Product not found"
+          },
+          "details": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ErrorDetailDto"
+            }
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-07-30T12:00:00.000Z"
+          },
+          "path": {
+            "type": "string",
+            "example": "/api/v1/products/product-404"
+          },
+          "requestId": {
+            "type": "string",
+            "example": "req-5c9f7a3d"
+          }
+        },
+        "required": [
+          "statusCode",
+          "code",
+          "message",
+          "details",
+          "timestamp",
+          "path",
+          "requestId"
+        ]
+      },
+      "RefreshTokenDto": {
+        "type": "object",
+        "properties": {
+          "refreshToken": {
+            "type": "string",
+            "description": "Refresh token returned by login or the previous refresh call."
+          }
+        },
+        "required": [
+          "refreshToken"
+        ]
+      },
+      "SimpleUserResponseDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/SimpleUserDto"
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "Object": {
+        "type": "object",
+        "properties": {}
+      },
+      "SimpleProductDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "product-keyboard"
+          },
+          "name": {
+            "type": "string",
+            "example": "Mechanical Keyboard"
+          },
+          "slug": {
+            "type": "string",
+            "example": "mechanical-keyboard"
+          },
+          "description": {
+            "type": "string",
+            "example": "Hot-swappable compact keyboard."
+          },
+          "priceCents": {
+            "type": "number",
+            "example": 12990,
+            "description": "Price in the smallest currency unit."
+          },
+          "currency": {
+            "type": "string",
+            "enum": [
+              "USD",
+              "EUR"
+            ],
+            "example": "USD"
+          },
+          "categoryId": {
+            "type": "string",
+            "example": "category-electronics"
+          },
+          "stock": {
+            "type": "number",
+            "example": 24,
+            "minimum": 0
+          },
+          "rating": {
+            "type": "number",
+            "example": 4.8,
+            "minimum": 0,
+            "maximum": 5
+          },
+          "imageUrl": {
+            "type": "string",
+            "format": "uri",
+            "example": "https://picsum.photos/seed/keyboard/640/480"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "version": {
+            "type": "number",
+            "example": 1,
+            "description": "Optimistic-lock version."
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "slug",
+          "description",
+          "priceCents",
+          "currency",
+          "categoryId",
+          "stock",
+          "rating",
+          "imageUrl",
+          "createdAt",
+          "version"
+        ]
+      },
+      "PageMetaDto": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "number",
+            "example": 1,
+            "minimum": 1
+          },
+          "limit": {
+            "type": "number",
+            "example": 20,
+            "minimum": 1
+          },
+          "total": {
+            "type": "number",
+            "example": 48,
+            "minimum": 0
+          },
+          "totalPages": {
+            "type": "number",
+            "example": 3,
+            "minimum": 0
+          }
+        },
+        "required": [
+          "page",
+          "limit",
+          "total",
+          "totalPages"
+        ]
+      },
+      "ProductsResponseDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SimpleProductDto"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PageMetaDto"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ]
+      },
+      "ProductResponseDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/SimpleProductDto"
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "CreateProductDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "USB-C Dock"
+          },
+          "description": {
+            "type": "string",
+            "example": "Dock with HDMI, Ethernet and power delivery."
+          },
+          "priceCents": {
+            "type": "number",
+            "example": 8990,
+            "minimum": 0
+          },
+          "currency": {
+            "type": "string",
+            "enum": [
+              "USD",
+              "EUR"
+            ],
+            "example": "USD"
+          },
+          "categoryId": {
+            "type": "string",
+            "example": "category-electronics"
+          },
+          "stock": {
+            "type": "number",
+            "example": 15,
+            "minimum": 0
+          },
+          "imageUrl": {
+            "type": "string",
+            "format": "uri",
+            "example": "https://picsum.photos/seed/dock/640/480"
+          }
+        },
+        "required": [
+          "name",
+          "description",
+          "priceCents",
+          "currency",
+          "categoryId",
+          "stock",
+          "imageUrl"
+        ]
+      },
+      "UpdateProductDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "USB-C Dock"
+          },
+          "description": {
+            "type": "string",
+            "example": "Dock with HDMI, Ethernet and power delivery."
+          },
+          "priceCents": {
+            "type": "number",
+            "example": 8990,
+            "minimum": 0
+          },
+          "currency": {
+            "type": "string",
+            "enum": [
+              "USD",
+              "EUR"
+            ],
+            "example": "USD"
+          },
+          "categoryId": {
+            "type": "string",
+            "example": "category-electronics"
+          },
+          "stock": {
+            "type": "number",
+            "example": 15,
+            "minimum": 0
+          },
+          "imageUrl": {
+            "type": "string",
+            "format": "uri",
+            "example": "https://picsum.photos/seed/dock/640/480"
+          },
+          "version": {
+            "type": "number",
+            "example": 1,
+            "minimum": 1,
+            "description": "Version last read by the frontend."
+          }
+        },
+        "required": [
+          "version"
+        ]
+      },
+      "MutationResultDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "product-001"
+          },
+          "success": {
+            "type": "boolean",
+            "example": true
+          }
+        },
+        "required": [
+          "id",
+          "success"
+        ]
+      },
+      "MutationResponseDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/MutationResultDto"
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "SimpleCategoryDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "category-electronics"
+          },
+          "name": {
+            "type": "string",
+            "example": "Electronics"
+          },
+          "slug": {
+            "type": "string",
+            "example": "electronics"
+          },
+          "productCount": {
+            "type": "number",
+            "example": 4
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "slug",
+          "productCount"
+        ]
+      },
+      "CategoriesResponseDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SimpleCategoryDto"
+            }
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "CategoryResponseDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/SimpleCategoryDto"
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "SimpleOrderItemDto": {
+        "type": "object",
+        "properties": {
+          "productId": {
+            "type": "string",
+            "example": "product-keyboard"
+          },
+          "productName": {
+            "type": "string",
+            "example": "Mechanical Keyboard"
+          },
+          "quantity": {
+            "type": "number",
+            "example": 1
+          },
+          "unitPriceCents": {
+            "type": "number",
+            "example": 12990
+          }
+        },
+        "required": [
+          "productId",
+          "productName",
+          "quantity",
+          "unitPriceCents"
+        ]
+      },
+      "SimpleOrderDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "order-001"
+          },
+          "userId": {
+            "type": "string",
+            "example": "user-customer"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "paid",
+              "shipped",
+              "cancelled"
+            ]
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SimpleOrderItemDto"
+            }
+          },
+          "totalCents": {
+            "type": "number",
+            "example": 17980
+          },
+          "currency": {
+            "type": "string",
+            "enum": [
+              "USD",
+              "EUR"
+            ],
+            "example": "USD"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "userId",
+          "status",
+          "items",
+          "totalCents",
+          "currency",
+          "createdAt"
+        ]
+      },
+      "OrdersResponseDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SimpleOrderDto"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PageMetaDto"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ]
+      },
+      "OrderResponseDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/SimpleOrderDto"
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "CreateOrderItemDto": {
+        "type": "object",
+        "properties": {
+          "productId": {
+            "type": "string",
+            "example": "product-keyboard"
+          },
+          "quantity": {
+            "type": "number",
+            "example": 1,
+            "minimum": 1,
+            "maximum": 20
+          }
+        },
+        "required": [
+          "productId",
+          "quantity"
+        ]
+      },
+      "CreateOrderDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CreateOrderItemDto"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "ScenarioDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "slow"
+          },
+          "description": {
+            "type": "string",
+            "example": "Delays the response to exercise loading and cancellation states."
+          }
+        },
+        "required": [
+          "name",
+          "description"
+        ]
+      },
+      "ScenariosResponseDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ScenarioDto"
+            }
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "TestingActionDataDto": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "message": {
+            "type": "string",
+            "example": "State reset to the default deterministic seed."
+          }
+        },
+        "required": [
+          "success",
+          "message"
+        ]
+      },
+      "TestingActionResponseDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/TestingActionDataDto"
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "ChangeSimpleRoleDto": {
+        "type": "object",
+        "properties": {
+          "role": {
+            "type": "string",
+            "enum": [
+              "admin",
+              "customer"
+            ],
+            "example": "customer"
+          }
+        },
+        "required": [
+          "role"
+        ]
+      }
+    }
+  }
+}

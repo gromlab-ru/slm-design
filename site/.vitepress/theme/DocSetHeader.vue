@@ -5,21 +5,21 @@ import { useData, withBase } from 'vitepress'
 const { page } = useData()
 
 const documentSet = computed(() => {
-  if (page.value.relativePath.startsWith('ru/specification/')) {
+  if (page.value.relativePath.startsWith('level-1/')) {
     return {
-      eyebrow: 'Нормативный документ',
-      href: '/ru/specification/',
-      meta: 'DRAFT · v0.1.0',
-      title: 'SLM Design Specification',
+      eyebrow: 'Архитектурная документация',
+      href: '/level-1/',
+      meta: 'LEVEL 1 · DRAFT',
+      title: 'SLM Level 1',
     }
   }
 
-  if (page.value.relativePath.startsWith('ru/guide/')) {
+  if (page.value.relativePath.startsWith('rules/')) {
     return {
-      eyebrow: 'Учебный материал',
-      href: '/ru/guide/',
-      meta: 'GUIDE',
-      title: 'SLM Architecture Guide',
+      eyebrow: 'Канонический реестр',
+      href: '/rules/level-1',
+      meta: '14 RULES · DRAFT',
+      title: 'Правила SLM',
     }
   }
 
@@ -27,15 +27,3 @@ const documentSet = computed(() => {
 })
 </script>
 
-<template>
-  <div v-if="documentSet" class="doc-set-header">
-    <a class="doc-set-header__back" :href="withBase('/ru/')">Документация</a>
-    <a class="doc-set-header__title" :href="withBase(documentSet.href)">
-      {{ documentSet.title }}
-    </a>
-    <div class="doc-set-header__meta">
-      <span>{{ documentSet.eyebrow }}</span>
-      <span>{{ documentSet.meta }}</span>
-    </div>
-  </div>
-</template>
