@@ -7,6 +7,8 @@
 - [`SLM-L2-DEPENDENCY-A012`](../../rules/level-2.md#slm-l2-dependency-a012)
 - [`SLM-L2-FRAMEWORK-R014`](../../rules/level-2.md#slm-l2-framework-r014)
 - [`SLM-L2-FRAMEWORK-R015`](../../rules/level-2.md#slm-l2-framework-r015)
+- [`SLM-L2-BUSINESS-A019`](../../rules/level-2.md#slm-l2-business-a019)
+- [`SLM-L2-BUSINESS-A022`](../../rules/level-2.md#slm-l2-business-a022)
 
 ## Framework Group
 
@@ -40,6 +42,22 @@ Framework binding module может:
 - связывать framework lifecycle с публичным API домена.
 
 Он не вызывает business-фабрику или preset, не выбирает adapters и не создаёт новые предметные сценарии.
+
+Framework binding module импортирует типы и runtime error contract через разные фасеты:
+
+```ts
+import type {
+  AuthApi,
+  AuthError,
+} from '@/domains/auth/business'
+
+import {
+  AUTH_ERROR_CODES,
+  isAuthError,
+} from '@/domains/auth/business/error'
+```
+
+Импорт `business/factory` из Framework Group запрещён: готовый `DomainApi` передаётся модулю извне.
 
 ## Модуль session
 

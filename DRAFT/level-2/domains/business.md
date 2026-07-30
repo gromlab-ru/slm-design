@@ -11,6 +11,8 @@
 - [`SLM-L2-ERROR-R009`](../../rules/level-2.md#slm-l2-error-r009)
 - [`SLM-L2-ERROR-R010`](../../rules/level-2.md#slm-l2-error-r010)
 - [`SLM-L2-BUSINESS-R018`](../../rules/level-2.md#slm-l2-business-r018)
+- [`SLM-L2-BUSINESS-A019`](../../rules/level-2.md#slm-l2-business-a019)
+- [`SLM-L2-BUSINESS-A022`](../../rules/level-2.md#slm-l2-business-a022)
 
 ## Роль
 
@@ -28,10 +30,13 @@
 
 ## Публичный API модуля
 
-```ts
-export { AUTH_ERROR_CODES, isAuthError } from './errors/auth-error'
-export { authFactory } from './auth.factory'
+Один логический API `business` разделён на три фиксированных фасета.
 
+### Type-only barrel
+
+Корневой `business/index.ts` экспортирует только типы:
+
+```ts
 export type {
   AuthApi,
   AuthDeps,
@@ -42,7 +47,57 @@ export type {
 } from './types'
 ```
 
-Фабрика, error contract и типы экспортируются для presets, adapters, framework-модулей и мест сборки графа. Предметные validators, normalizers, внутренние преобразователи исходных ошибок, constructors, mutable store и технические DTO остаются закрытыми и используются публичными сценариями `DomainApi`.
+Потребитель использует этот путь только через `import type`:
+
+```ts
+import type {
+  AuthApi,
+  AuthError,
+  AuthErrorCode,
+} from '@/domains/auth/business'
+```
+
+### Factory entry
+
+`business/factory.ts` экспортирует только runtime-фабрику:
+
+```ts
+export { authFactory } from './auth.factory'
+```
+
+```ts
+import { authFactory } from '@/domains/auth/business/factory'
+```
+
+### Error entry
+
+`business/error.ts` экспортирует только runtime-коды и guards:
+
+```ts
+export { AUTH_ERROR_CODES, isAuthError } from './errors/auth-error'
+```
+
+```ts
+import {
+  AUTH_ERROR_CODES,
+  isAuthError,
+} from '@/domains/auth/business/error'
+```
+
+`AuthError` и `AuthErrorCode` не реэкспортируются из `business/error`: все public types имеют один канонический путь через type-only barrel. Предметные validators, normalizers, constructors ошибок, source-error mappers, mutable store и технические DTO остаются закрытыми.
+
+Другие внешние пути внутри `business` являются deep imports. Файлы `factory.ts` и `error.ts` являются фасетами одного SLM-модуля, а не сегментами или вложенными модулями.
+
+## Потребители фасетов
+
+| Потребитель | `business` | `business/factory` | `business/error` |
+|---|---|---|---|
+| Adapter module своего домена | Type-only | Нет | Нет |
+| Preset своего домена | Type-only | Да | Нет |
+| Framework binding module своего домена | Type-only | Нет | Да |
+| `composition` или `app` | Type-only | Да | Да |
+| Модуль другого доменного пакета | Type-only | Нет | Нет |
+| Тест | Type-only | По границе тестируемого владельца | По границе тестируемого владельца |
 
 ## Один DomainApi
 
@@ -56,13 +111,13 @@ export type AuthApi = {
 export type AuthFactory = (deps: AuthDeps) => AuthApi
 ```
 
-Все presets вызывают одну `authFactory` и создают `AuthApi` этого контракта. Preset может использовать другую техническую реализацию, но не добавляет метод и не меняет семантику сценария.
+Все presets вызывают одну `authFactory` и создают `AuthApi` этого контракта. Preset может использовать другую техническую реализацию, но не добавляет метод и не меняет семантику сценария. Одноразовое место сборки в `composition` также может вызвать `business/factory`, используя публичные adapter-модули пакета, если фабрика имеет технические зависимости.
 
 Точная модель хранения, initial state, подписки и SSR snapshot пока остаётся открытым вопросом. Нормативной уже является публичная граница: приложение наблюдает доменное состояние через `DomainApi`, а не напрямую через adapter или framework store.
 
 ## Обязательный контракт ошибок
 
-Каждый `business` объявляет устойчивые коды, безопасную readonly-форму и runtime guard:
+Каждый `business` объявляет устойчивые коды, безопасную readonly-форму и runtime guard. Типы публикуются через `business`, а runtime symbols через `business/error`:
 
 ```ts
 export const AUTH_ERROR_CODES = {

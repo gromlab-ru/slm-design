@@ -8,10 +8,14 @@
 - Level 2 заменяет доменный модуль доменным пакетом.
 - Корень пакета содержит только metadata, модули и Groups и не имеет executable API.
 - `business` предоставляет одну фабрику и один `DomainApi`.
+- Публичный API `business` разделён на type-only barrel, `business/factory` и `business/error`; другие пути запрещены.
 - Приложение получает доменные данные, состояние и результаты только через `DomainApi`.
 - Каждый `business` экспортирует коды, тип и runtime guard доменных ошибок.
 - Ожидаемые ошибки adapters и других доменов не пересекают API текущего домена.
-- Количество presets определяется реальными окружениями; универсальный preset не обязателен.
+- Каждый доменный пакет содержит минимум один preset; универсальный изоморфный preset не обязателен.
+- При наличии технических зависимостей Group `adapters` обязательна, а каждая production implementation является отдельным SLM-модулем.
+- Все production consumers используют публичные adapter-модули; inline adapter implementations вне Group `adapters` запрещены.
+- Одноразовая composition может вызвать `business/factory` напрямую; это не отменяет обязательный preset пакета.
 - Runtime cross-domain imports запрещены; type-only business contracts разрешены и входят в DAG.
 - Framework Group называется по фреймворку и содержит самостоятельные SLM-модули.
 - Cross-domain framework state, hooks, contexts и components не импортируются.

@@ -4,7 +4,7 @@
 
 ## Конфигурация проекта
 
-Конфигурация проверки сопоставляет физические пути с доменными пакетами, metadata, SLM-модулями, Groups, публичными точками входа, метками сред выполнения и allowlist внешних пакетов, объявленных business-safe. Она отдельно распознаёт navigation Groups слоя `domains` и Groups внутри пакета.
+Конфигурация проверки сопоставляет физические пути с доменными пакетами, metadata, SLM-модулями, Groups, тремя фасетами `business`, техническими зависимостями, adapter-модулями, публичными точками входа, метками сред выполнения и allowlist внешних пакетов, объявленных business-safe. Она отдельно распознаёт navigation Groups слоя `domains` и Groups внутри пакета.
 
 Формат такой конфигурации пока не выбран. Независимо от формата проверка должна анализировать import-граф и объявленные границы, а не угадывать сущность только по имени папки.
 
@@ -14,6 +14,9 @@
 
 - исполняемый файл, root `index.ts`, состояние или реэкспорт в корне доменного пакета;
 - отсутствие `business` или несколько модулей `business` в одном пакете;
+- отсутствие любого из трёх entry points `business`, `business/factory`, `business/error`, runtime export из корневого barrel, type export из runtime-фасета, другой публичный путь либо deep import внутри `business`;
+- импорт фасета `business` потребителем, которому этот фасет не разрешён;
+- отсутствие непосредственно в корне пакета непустой Group `presets` или наличие в ней прямого дочернего элемента без объявленной модульной границы;
 - deep imports во внутренние части модулей;
 - runtime- или type-only достижимость framework-, adapter-, preset-, infra- или environment-specific кода из `business`;
 - runtime-импорт любого экспорта другого доменного пакета;
@@ -28,8 +31,11 @@
 
 - представляет ли пакет одну связную предметную область;
 - является ли `DomainApi` единственным runtime-источником доменных данных и результатов для приложения;
-- принадлежат ли коды, тип и guard доменных ошибок модулю `business`;
+- является ли фабрика единственным runtime-экспортом `business/factory`;
+- содержит ли `business/error` только runtime-коды и guards, а type-only barrel именованные типы DomainError и DomainErrorCode;
 - преобразует ли business ожидаемые технические и cross-domain сбои в собственные ошибки;
+- является ли каждая production-реализация технической зависимости отдельным модулем Group `adapters`, включая реализации, используемые только в одном месте;
+- отсутствуют ли production adapters вне Group `adapters` во всём production-графе; test-only fakes не участвуют в этой проверке;
 - представляет ли каждый preset один реальный контекст выполнения и сохраняет ли контракт фабрики;
 - принадлежит ли каждый framework binding module домену, а не странице или multi-domain сценарию;
 - соответствует ли каждый объявленный business-safe внешний пакет ограничениям детерминированной библиотеки без runtime capability;
@@ -37,7 +43,7 @@
 
 ## Тестирование
 
-Business-сценарии проверяются через фабрику с управляемыми зависимостями. Preset проверяет выбор реализаций и границу среды. Framework binding module проверяет собственный Provider, hook или component без повторения всего набора business-сценариев.
+Business-сценарии проверяются через `business/factory` с управляемыми test fakes. Adapter module проверяет техническое преобразование. Preset проверяет границу среды и, при наличии технических зависимостей, выбор adapter-модулей. Framework binding module проверяет собственный Provider, hook или component без повторения всего набора business-сценариев.
 
 Import-graph checks не заменяются runtime-тестами.
 
@@ -53,6 +59,10 @@ Import-graph checks не заменяются runtime-тестами.
 - [`SLM-L2-ENVIRONMENT-A013`](../rules/level-2.md#slm-l2-environment-a013)
 - [`SLM-L2-MIGRATION-A017`](../rules/level-2.md#slm-l2-migration-a017)
 - [`SLM-L2-BUSINESS-R018`](../rules/level-2.md#slm-l2-business-r018)
+- [`SLM-L2-BUSINESS-A019`](../rules/level-2.md#slm-l2-business-a019)
+- [`SLM-L2-PRESET-A020`](../rules/level-2.md#slm-l2-preset-a020)
+- [`SLM-L2-ADAPTER-R021`](../rules/level-2.md#slm-l2-adapter-r021)
+- [`SLM-L2-BUSINESS-A022`](../rules/level-2.md#slm-l2-business-a022)
 - [`SLM-L1-DEPENDENCY-A005`](../rules/level-1.md#slm-l1-dependency-a005)
 
 Скрипт `draft-rules.js` проверяет целостность реестров и ссылок документации, но не архитектуру приложения.

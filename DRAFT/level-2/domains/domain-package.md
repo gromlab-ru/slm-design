@@ -8,6 +8,10 @@
 - [`SLM-L2-DOMAIN-A003`](../../rules/level-2.md#slm-l2-domain-a003)
 - [`SLM-L2-GROUP-R004`](../../rules/level-2.md#slm-l2-group-r004)
 - [`SLM-L2-BUSINESS-R005`](../../rules/level-2.md#slm-l2-business-r005)
+- [`SLM-L2-BUSINESS-A019`](../../rules/level-2.md#slm-l2-business-a019)
+- [`SLM-L2-PRESET-A020`](../../rules/level-2.md#slm-l2-preset-a020)
+- [`SLM-L2-ADAPTER-R021`](../../rules/level-2.md#slm-l2-adapter-r021)
+- [`SLM-L2-BUSINESS-A022`](../../rules/level-2.md#slm-l2-business-a022)
 
 ## Предметная граница
 
@@ -32,7 +36,9 @@ domains/auth/
 - ownership metadata;
 - декларативный manifest или декларативная конфигурация архитектурной проверки;
 - обязательный модуль `business`;
-- Groups допустимых ролей.
+- обязательная непустая Group `presets`;
+- непустая Group `adapters`, если фабрика имеет технические зависимости;
+- Framework Groups при наличии соответствующих модулей.
 
 В корне запрещены:
 
@@ -46,19 +52,24 @@ Metadata содержит только статические данные, не
 
 ## Модули и Groups
 
-`business` размещается непосредственно в пакете. Presets и самостоятельные adapters размещаются в Groups `presets` и `adapters`. Framework Group называется по фреймворку: `react`, `vue` и аналогично.
+`business` размещается непосредственно в пакете и предоставляет три публичных фасета: type-only barrel, `factory` и `error`. Presets размещаются в обязательной Group `presets`. Все production adapters являются самостоятельными модулями Group `adapters` и не определяются в других частях production-графа. Framework Group называется по фреймворку: `react`, `vue` и аналогично.
 
 ```text
 auth/
 ├── business/                  # SLM-модуль
-├── presets/                  # Group
+│   ├── index.ts              # Только public types
+│   ├── factory.ts            # Public factory entry
+│   └── error.ts              # Public error runtime entry
+├── adapters/                 # Group при наличии technical dependencies
+│   └── phone-http/           # SLM-модуль
+├── presets/                  # Обязательная Group
 │   └── browser/              # SLM-модуль
 └── react/                    # Framework Group
     ├── session/              # SLM-модуль
     └── login-form/           # SLM-модуль
 ```
 
-Groups не имеют `index.ts`. Поэтому публичными путями являются `auth/business`, `auth/presets/browser`, `auth/react/session`, но не `auth`, `auth/presets` или `auth/react`.
+Groups не имеют `index.ts`. Поэтому публичными путями являются `auth/business`, `auth/business/factory`, `auth/business/error`, `auth/adapters/phone-http`, `auth/presets/browser` и `auth/react/session`, но не `auth`, `auth/adapters`, `auth/presets` или `auth/react`.
 
 ## Навигационные Groups
 

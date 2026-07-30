@@ -5,6 +5,10 @@
 ## Связанное правило
 
 - [`SLM-L2-MIGRATION-A017`](../../rules/level-2.md#slm-l2-migration-a017)
+- [`SLM-L2-BUSINESS-A019`](../../rules/level-2.md#slm-l2-business-a019)
+- [`SLM-L2-PRESET-A020`](../../rules/level-2.md#slm-l2-preset-a020)
+- [`SLM-L2-ADAPTER-R021`](../../rules/level-2.md#slm-l2-adapter-r021)
+- [`SLM-L2-BUSINESS-A022`](../../rules/level-2.md#slm-l2-business-a022)
 
 ## Исходная форма Level 1
 
@@ -29,10 +33,18 @@ domains/auth/                  # Доменный пакет
 │   ├── lib/
 │   ├── services/
 │   ├── types/
-│   └── index.ts
-├── presets/                  # Group
+│   ├── index.ts              # Только public types
+│   ├── factory.ts            # Public factory entry
+│   └── error.ts              # Public error runtime entry
+├── adapters/                 # Group
+│   ├── phone-http/           # SLM-модуль
+│   │   └── index.ts
+│   ├── browser-session/      # SLM-модуль
+│   │   └── index.ts
+│   └── request-session/      # SLM-модуль
+│       └── index.ts
+├── presets/                  # Обязательная Group
 │   ├── browser/              # SLM-модуль
-│   │   ├── adapters/
 │   │   └── index.ts
 │   └── request/              # SLM-модуль
 │       └── index.ts
@@ -47,20 +59,35 @@ domains/auth/                  # Доменный пакет
 
 ## Перенос ответственности
 
-| Исходная часть | Владелец Level 2 |
-|---|---|
-| Сценарии, предметные типы, единый API | `auth/business` |
-| Коды, тип и guard ошибок | `auth/business` |
-| Browser storage и HTTP adapters | `auth/presets/browser` |
-| Cookies, request data и server adapters | `auth/presets/request` |
-| Provider и session hooks | `auth/react/session` |
-| Переиспользуемая форма | `auth/react/login-form` |
-| Страница, текст и redirect | `compositions` |
+| Исходная часть | Владелец Level 2 | Публичный путь |
+|---|---|---|
+| Сценарии и public types | `auth/business` | `auth/business` |
+| Runtime-фабрика | `auth/business` | `auth/business/factory` |
+| Коды и guards ошибок | `auth/business` | `auth/business/error` |
+| Browser storage и HTTP adapters | Соответствующий adapter-модуль | `auth/adapters/*` |
+| Cookies, request data и server adapters | Соответствующий adapter-модуль | `auth/adapters/*` |
+| Выбор browser implementations | `auth/presets/browser` | `auth/presets/browser` |
+| Выбор request implementations | `auth/presets/request` | `auth/presets/request` |
+| Provider и session hooks | `auth/react/session` | `auth/react/session` |
+| Переиспользуемая форма | `auth/react/login-form` | `auth/react/login-form` |
+| Страница, текст и redirect | `compositions` | API конкретной composition |
 
 ## Новые импорты
 
 ```ts
-import { authFactory, isAuthError } from '@/domains/auth/business'
+import type {
+  AuthApi,
+  AuthError,
+  AuthErrorCode,
+} from '@/domains/auth/business'
+
+import { authFactory } from '@/domains/auth/business/factory'
+import {
+  AUTH_ERROR_CODES,
+  isAuthError,
+} from '@/domains/auth/business/error'
+
+import { createPhoneHttpAdapter } from '@/domains/auth/adapters/phone-http'
 import { createBrowserAuth } from '@/domains/auth/presets/browser'
 import { AuthSessionProvider } from '@/domains/auth/react/session'
 import { LoginForm } from '@/domains/auth/react/login-form'
@@ -90,12 +117,13 @@ User не импортирует runtime-код Auth, а его React-модул
 ## Порядок перехода
 
 1. Определить dependency-connected набор доменов, который нужно мигрировать вместе.
-2. Выделить `business` и одну фабрику без environment-specific import-графа.
+2. Выделить `business` и три публичных фасета: type-only barrel, `factory` и `error`.
 3. Зафиксировать `DomainApi`, error codes, error type и runtime guard.
-4. Перенести browser/server wiring в нужные presets и adapters.
-5. Разделить React-ответственности на модули внутри Group `react`.
-6. Перенести страницы, redirects и multi-domain UI в `compositions`.
-7. Перевести внешние импорты на module-specific paths.
-8. Удалить старый root `index.ts` и проверить import-граф.
+4. Оформить каждую production implementation отдельным модулем `adapters/*`.
+5. Создать минимум один preset и перенести туда повторяемый выбор adapter-модулей.
+6. Разделить React-ответственности на модули внутри Group `react`.
+7. Перенести страницы, redirects и multi-domain UI в `compositions`.
+8. Перевести внешние импорты на разрешённые public paths.
+9. Удалить старый root `index.ts` и проверить import-граф.
 
 Простые доменные модули могут оставаться в SLM root только как временное миграционное состояние. Они не создают прямые runtime- или type-only зависимости с уже переведёнными пакетами.

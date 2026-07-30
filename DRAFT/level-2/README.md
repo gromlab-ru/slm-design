@@ -13,6 +13,7 @@ Level 2 соблюдает определения и правила Level 1, к�
 | Порядок `app → compositions → domains → infra → ui → shared` | Сохраняется |
 | Модуль, Group, сегмент, компонент, публичный API и граф зависимостей | Сохраняют смысл |
 | Доменный модуль и [`SLM-L1-DOMAIN-R015`](../rules/level-1.md#slm-l1-domain-r015) | Заменяются доменным пакетом |
+| Единый публичный API модуля `business` | Представлен тремя объявленными фасетами одного логического API |
 | Навигационная Group слоя `domains` | Может содержать доменные пакеты |
 | Group внутри доменного пакета | Содержит обычные SLM-модули и Groups |
 
@@ -22,7 +23,7 @@ Level 2 соблюдает определения и правила Level 1, к�
 
 Level 2 оправдан, когда предметной области нужны один устойчивый `DomainApi`, разные сборки для браузера и сервера, несколько технических интеграций или самостоятельные domain-specific модули React, Vue либо другого фреймворка.
 
-Уровень выбирается для всего SLM root. Проект, в котором всем предметным областям достаточно простых доменных модулей, остаётся на Level 1. После завершённого перехода на Level 2 каждая предметная область представлена доменным пакетом, даже если отдельный пакет имеет только `business`.
+Уровень выбирается для всего SLM root. Проект, в котором всем предметным областям достаточно простых доменных модулей, остаётся на Level 1. После завершённого перехода на Level 2 каждая предметная область представлена доменным пакетом как минимум с `business` и одним preset.
 
 Размер каталога сам по себе не требует перехода.
 
@@ -33,11 +34,13 @@ src/domains/
 └── auth/                         # Доменный пакет
     ├── README.md                 # Необязательная metadata
     ├── business/                 # Обязательный SLM-модуль
-    │   └── index.ts
-    ├── presets/                  # Необязательная Group
+    │   ├── index.ts              # Только public types
+    │   ├── factory.ts            # Public factory entry
+    │   └── error.ts              # Public error runtime entry
+    ├── presets/                  # Обязательная непустая Group
     │   ├── browser/              # SLM-модуль
     │   └── request/              # SLM-модуль
-    ├── adapters/                 # Необязательная Group
+    ├── adapters/                 # При наличии technical dependencies
     │   └── identity-provider/    # SLM-модуль
     └── react/                    # Необязательная framework Group
         ├── session/              # SLM-модуль
@@ -51,13 +54,15 @@ src/domains/
 Приложение получает данные, состояние и результаты домена через готовый экземпляр `DomainApi`. Технический код импортирует только API конкретного модуля:
 
 ```ts
-import { authFactory, isAuthError } from '@/domains/auth/business'
+import type { AuthApi, AuthError } from '@/domains/auth/business'
+import { authFactory } from '@/domains/auth/business/factory'
+import { isAuthError } from '@/domains/auth/business/error'
 import { createBrowserAuth } from '@/domains/auth/presets/browser'
 import { AuthSessionProvider } from '@/domains/auth/react/session'
 import { LoginForm } from '@/domains/auth/react/login-form'
 ```
 
-Общие импорты `@/domains/auth` и `@/domains/auth/react` запрещены: пакет и Groups не имеют агрегирующих API.
+Общие импорты `@/domains/auth` и `@/domains/auth/react` запрещены: пакет и Groups не имеют агрегирующих API. Другие пути внутри `business`, кроме `business`, `business/factory` и `business/error`, являются deep imports.
 
 ## Миграция
 
