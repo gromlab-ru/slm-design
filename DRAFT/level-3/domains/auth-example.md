@@ -1,78 +1,68 @@
-# Auth как проверочный пример
+# Auth как пример миграции
 
-> Рабочая заметка на основе реального модуля `/home/gromov/projects/biocad/newbiocadru/apps/web/src/business/auth`. Код проекта не изменялся.
+> Проверочный пример Level 3. Он показывает направление декомпозиции, а не обязательный scaffold.
 
-Цель примера: проверить гипотезы Domain на существующем SLM business-модуле, а не предложить немедленную миграцию.
+## Исходная проблема
 
-## Текущее устройство
+В более ранней форме SLM business contract Auth и concrete assembly могли находиться отдельно:
 
 ```text
 business/auth/
 ├── auth.factory.ts
 ├── errors/
 ├── hooks/
-├── mappers/
 ├── services/
-├── tests/
 ├── types/
 └── index.ts
-```
 
-Runtime-сборка находится отдельно:
-
-```text
-compositions/business/knv/auth/
+compositions/business/auth/
 ├── adapters/
-├── create-knv-auth-business.ts
+├── create-auth-business.ts
 └── index.ts
 ```
 
-Новая сущность Domain может колоцировать обе ответственности без смешивания ролей:
+Такая форма отделяет pure business от concrete runtime, но разносит одну предметную область по разным архитектурным местам. Level 3 колоцирует их внутри Domain, не смешивая роли.
+
+## Целевая форма
 
 ```text
 domains/auth/
 ├── business/
+│   ├── auth.factory.ts
+│   ├── errors/
+│   ├── lib/
+│   ├── ports/
+│   ├── services/
+│   ├── types/
+│   └── index.ts
 ├── presets/
-│   └── {preset-name}/
-│       └── adapters/
-└── {framework-binding}/
+│   ├── application/
+│   │   ├── adapters/
+│   │   └── index.ts
+│   └── request/
+│       └── index.ts
+└── react/
+    ├── hooks/
+    ├── providers/
+    └── index.ts
 ```
 
-## Factory и client boundary
+## Разделение обязанностей
 
-### AUTH-N001: Текущий AuthApi содержит client-oriented hook
+| Исходная часть | Назначение в Level 3 |
+|---|---|
+| `auth.factory.ts`, scenarios, validators, domain errors | `domains/auth/business` |
+| SDK, storage и state manager integration | Private adapters выбранного preset |
+| Повторяемый browser builder | `domains/auth/presets/application` |
+| Request-specific cookies, headers и client | `domains/auth/presets/request` |
+| React hooks, provider и domain UI | `domains/auth/react` |
+| Page text, redirect и screen outcome | Consumer composition |
 
-`auth.factory.ts` импортирует `createAuthHook`, а `hooks/use-auth.hook.ts` содержит `'use client'`. Кроме того, `AuthDeps.session` описывает `useToken`.
+## Проверка границ
 
-Текущий transitive graph:
+`authFactory` не импортирует `useAuth`, `'use client'`, SDK или storage. React hook строится поверх готового `AuthApi`, например через framework-neutral `getSnapshot` и `subscribe`.
 
-```text
-authFactory
-  → createAuthHook
-  → 'use client'
-```
-
-Это практический пример того, почему neutral factory должна проверяться по всему transitive import graph, а framework hooks должны находиться в отдельном framework module Domain. Точный путь этого module пока не выбран.
-
-Возможное направление:
-
-```text
-business AuthApi
-  → framework-neutral state observation
-
-React binding
-  → useAuth над готовым AuthApi
-```
-
-Финальный state contract пока не выбран.
-
-## Pure phone logic
-
-### AUTH-N002: Нормализация телефона уже дублируется
-
-Business содержит private `normalizePhoneOtpPhone`, а auth-widget содержит отдельный `getPhoneDigits` и собственный `PHONE_DIGITS_LENGTH`.
-
-Это кандидат на public pure business function:
+Нормализация номера телефона может быть public pure business function:
 
 ```ts
 import {
@@ -81,93 +71,26 @@ import {
 } from '@/domains/auth/business'
 ```
 
-Business service и UI могут использовать одну семантику. Business service всё равно повторно валидирует вход независимо от UI-проверки.
-
-Существующий `business/user` показывает другой workaround: pure validators возвращаются через собранный `userFactory` API. Прямой pure export позволит не требовать assembly для детерминированной функции.
+UI использует её для feedback, но `requestPhoneOtp` повторно валидирует значение внутри business scenario.
 
 ## Error contract
 
-### AUTH-N003: Error contract фактически публичен, но описан не полностью
-
-Business создаёт `AuthBusinessError` с `code` и `retryAfterSeconds`, но public `index.ts` экспортирует только type `AuthErrorCode`.
-
-Consumer auth-widget поэтому:
-
-- повторяет строковые error codes в message map;
-- создаёт локальный `AuthErrorData`;
-- вручную проверяет `code` и `retryAfterSeconds` в `unknown`;
-- самостоятельно нормализует форму caught error.
-
-Предварительное исправление границы:
+`AuthBusinessError` остаётся private implementation. Consumer получает только stable contract:
 
 ```ts
-// Public business API.
-export { AUTH_ERROR_CODES, isAuthError }
-export type { AuthError, AuthErrorCode }
-
-// Business-private implementation.
-class AuthBusinessError extends Error {}
-const createAuthBusinessError = (...) => {}
+import {
+  AUTH_ERROR_CODES,
+  isAuthError,
+} from '@/domains/auth/business'
 ```
 
-Consumer получает безопасный observation contract, но не получает constructor и source mapping.
+Так React composition может выбрать сообщение или retry behavior по `code`, не зная SDK error, HTTP status или constructor private ошибки.
 
-## Presets
+## Migration order
 
-### AUTH-N004: Текущий createKnvAuthBusiness является preset
-
-`createKnvAuthBusiness()` выбирает `knvAuthPhoneAdapter` и `appAuthSessionAdapter`, затем вызывает `authFactory`.
-
-В новой терминологии это application preset, внутри которого могут оставаться KNV-specific adapters:
-
-```text
-domains/auth/presets/application/create-application-auth.ts
-```
-
-Он не является единственно допустимым assembly site. Tests, SSR request composition и другой product preset могут напрямую вызвать ту же `authFactory`.
-
-## SSR-вариант
-
-Одна factory позволяет получить request-scoped API без второй реализации business:
-
-```ts
-import 'server-only'
-
-export const createAuthForRequest = (input: AuthRequestInput) => {
-  return authFactory({
-    authPhone: createKnvServerAuthPhoneAdapter(input),
-    session: createRequestAuthSessionAdapter(input),
-  })
-}
-```
-
-Browser preset использует другую реализацию тех же ports. Factory, business types, pure functions и error contract остаются общими.
-
-## Предварительная целевая структура
-
-```text
-domains/auth/
-├── business/
-│   ├── auth.factory.ts
-│   ├── errors/
-│   ├── lib/
-│   ├── mappers/
-│   ├── services/
-│   ├── tests/
-│   ├── types/
-│   └── index.ts
-├── presets/
-│   └── application/
-│       ├── adapters/
-│       ├── create-application-auth.ts
-│       ├── create-application-auth.test.ts
-│       └── index.ts
-└── {framework-binding}/
-    └── index.ts
-```
-
-Это только проверочная структура. Она не фиксирует обязательность всех папок и не должна использоваться как scaffold checklist.
-
-Server-only/request preset может быть добавлен отдельным module при реальной потребности. Он не образует обязательную `server`-ветку Domain.
-
-Tests не используют общий testing preset. Business tests выполняют per-test assembly напрямую через `authFactory`, а production presets тестируются рядом с собственной реализацией только на wiring, scope и lifecycle.
+1. Выделить `business` entrypoint и убедиться, что его transitive graph isomorphic.
+2. Перенести concrete runtime в adapters выбранного preset.
+3. Оформить повторяемую assembly как `presets/application`.
+4. Перенести hooks и Provider в `react`, передавая им готовый API.
+5. Сохранить page-specific UI и graph ownership в `compositions`.
+6. Добавить factory, adapter, preset и React boundary tests до удаления старого пути.

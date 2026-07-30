@@ -171,6 +171,7 @@ const draftFiles = (await getMarkdownFiles(draftDirectory))
   .filter((file) => !ruleFiles.includes(file))
 const rules = (await Promise.all(ruleFiles.map(parseRules))).flat()
 const rulesByCode = new Map()
+const rulesByLevelNumber = new Map()
 
 for (const rule of rules) {
   const duplicate = rulesByCode.get(rule.code)
@@ -180,6 +181,17 @@ for (const rule of rules) {
   }
 
   rulesByCode.set(rule.code, rule)
+
+  const levelNumber = `${rule.level}:${rule.number}`
+  const duplicateNumber = rulesByLevelNumber.get(levelNumber)
+
+  if (duplicateNumber) {
+    throw new Error(
+      `Duplicate SLM rule number L${rule.level}-${String(rule.number).padStart(3, '0')}: ${duplicateNumber.source}, ${rule.source}`,
+    )
+  }
+
+  rulesByLevelNumber.set(levelNumber, rule)
 }
 
 const references = (await Promise.all(draftFiles.map(parseReferences))).flat()

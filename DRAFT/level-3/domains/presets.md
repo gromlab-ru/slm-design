@@ -1,141 +1,89 @@
 # Presets и SSR
 
-> Рабочая заметка. Не является нормативным разделом спецификации.
+> Пояснение повторяемой assembly Domain.
 
-## Определение
+## Связанные правила
 
-### PRE-N003: Preset является готовым вариантом assembly
+- [`SLM-L3-PRESET-R009`](../../rules/level-3.md#slm-l3-preset-r009)
+- [`SLM-L3-ASSEMBLY-R010`](../../rules/level-3.md#slm-l3-assembly-r010)
+- [`SLM-L3-ENVIRONMENT-A012`](../../rules/level-3.md#slm-l3-environment-a012)
+- [`SLM-L3-FACTORY-R006`](../../rules/level-3.md#slm-l3-factory-r006)
 
-Preset выбирает implementations ports и создаёт API одной business factory для конкретного execution context.
+## Роль preset
+
+Preset -- именованная повторяемая assembly одной business factory для конкретного execution context. Он выбирает concrete implementations ports, создаёт `AuthApi` и передаёт caller lifecycle operations, определённые module-владельцами resources.
+
+```text
+authFactory
+├── presets/application -> browser-compatible AuthApi
+├── presets/request     -> request-scoped AuthApi
+└── presets/server-action -> server action AuthApi
+```
+
+Среда определяется preset и adapters, а не `mode` внутри factory. Tests создают per-test assembly напрямую через factory и не требуют общего `presets/testing`.
+
+## Структура и public API
+
+```text
+domains/auth/presets/application/
+├── adapters/
+├── create-application-auth.ts
+├── create-application-auth.test.ts
+└── index.ts
+```
+
+`application` -- пример имени. Preset называется по execution scope или устойчивому назначению: `application`, `request`, `server-action`. Он не называется по temporary consumer, если configuration не предназначена для повторного использования.
 
 ```ts
-export const createKnvAuthBusiness = (): AuthApi => {
+export const createApplicationAuth = (): AuthApi => {
   return authFactory({
-    authPhone: knvAuthPhoneAdapter,
-    session: appAuthSessionAdapter,
+    phone: createApplicationAuthPhoneAdapter(),
+    session: createApplicationAuthSessionAdapter(),
   })
 }
 ```
 
-`createKnvAuthBusiness` является preset builder, а не второй factory и не единственно допустимое место сборки.
+Preset не добавляет scenario, не меняет error mapping и не скрывает business rule. Он также не становится монополией на factory: явный composition graph owner может собрать одноразовый graph, если он принимает на себя все обязанности assembly.
 
-## Несколько presets одной factory
+## Scope и lifecycle
 
-```text
-authFactory
-├── createBrowserAuth
-├── createAuthForRequest
-├── createAuthForServerAction
-└── другие production presets
+Preset объявляет ожидаемый scope API instance. Application preset используется в application scope; request preset создаёт новый instance для каждого request. Graph owner удерживает instance только в этом scope и не хранит request data в application singleton.
 
-tests и custom graph owners могут вызывать authFactory напрямую
-```
-
-### PRE-N004: Presets могут отличаться adapters и lifecycle
-
-Browser preset может использовать browser storage и query runtime. Request preset может использовать cookies, headers и request-scoped client. Tests вместо общего preset создают локальную per-test assembly с memory ports, mocks или fakes.
-
-Business rules и форма создаваемого `AuthApi` при этом не меняются.
-
-### PRE-N005: Preset может предоставлять суженный API view
-
-Preset может не раскрывать consumer все методы созданного API:
+Если assembly создаёт lifecycle resource, caller получает явный cleanup handle:
 
 ```ts
-export type AuthSsrApi = Pick<AuthApi, 'resolveSession'>
+export type AuthRequestAssembly = {
+  api: AuthApi
+  dispose: () => void | Promise<void>
+}
 
 export const createAuthForRequest = (
   input: AuthRequestInput,
-): AuthSsrApi => {
-  const authApi = authFactory(createRequestAuthDeps(input))
+): AuthRequestAssembly => {
+  const session = createRequestSessionAdapter(input)
 
   return {
-    resolveSession: authApi.resolveSession,
+    api: authFactory({
+      phone: createRequestAuthPhoneAdapter(input),
+      session,
+    }),
+    dispose: session.dispose,
   }
 }
 ```
 
-Это ограничивает contract конкретного scope, но не создаёт новую business factory.
-
-## SSR
-
-### PRE-N006: Request владеет instance, созданным request preset
-
-Если API зависит от cookies, headers, tenant, locale, request ID или abort signal, preset создаёт новый instance для каждого request и передаёт ownership вызывающему request scope.
-
-Application singleton для request data недопустим, потому что может смешать состояния независимых запросов. Если preset создаёт disposable resource, результат должен позволить request owner выполнить cleanup.
-
-Предварительная форма:
-
-```ts
-import 'server-only'
-
-export const createAuthForRequest = (
-  input: AuthRequestInput,
-): AuthApi => {
-  return authFactory({
-    authPhone: createServerAuthPhoneAdapter(input),
-    session: createRequestSessionAdapter(input),
-  })
-}
-```
-
-### PRE-N007: SSR использует тот же business contract
-
-Преимущества одной factory:
-
-- одинаковые business rules в browser и на server;
-- одинаковые domain types и errors;
-- request adapters не протекают в business;
-- factory тестируется без Next.js;
-- backend, cookies и headers заменяются независимо;
-- server rendering не требует второй реализации business.
+Factory и preset construction не запускают I/O или subscriptions. Если domain lifecycle должен начать resource, module-владелец выражает это отдельной API operation; graph owner вызывает её после начала scope и выполняет предоставленный cleanup при его завершении.
 
 ## Server-only boundary
 
-### PRE-N008: Environment-specific preset может иметь отдельный public entrypoint
-
-Если preset должен быть недостижим из client graph, проект может выделить для него отдельный entrypoint и использовать framework/build marker. Имя и физическая группировка preset не задаются SLM.
+Server preset имеет отдельный entrypoint и marker выбранного framework/build system:
 
 ```ts
-// Один из возможных server-only preset entrypoints.
 import 'server-only'
 
 export { createAuthForRequest } from './create-auth-for-request'
 ```
 
-Этот entrypoint не реэкспортируется через:
+Этот entrypoint не реэкспортируется через `business`, `react` или client-compatible preset. Server adapter может иметь собственный marker для защиты от ошибочного прямого import.
 
-- `domains/auth/business`;
-- browser preset;
-- React client binding;
-- общий Domain barrel.
-
-Server adapters также могут иметь собственный `server-only` marker для защиты от ошибочного прямого импорта.
-
-### PRE-N009: Isomorphic factory не импортирует server-only marker
-
-`server-only` относится к preset/framework boundary, а не к business factory. Это позволяет вызывать factory в unit tests, другом server framework или browser preset.
-
-## Browser boundary
-
-### PRE-N010: Client-compatible preset не достигает server-only graph
-
-Client-compatible preset импортирует только isomorphic business и совместимые с ним adapters. Secrets, privileged SDK и Node-only modules не должны входить в его transitive import graph.
-
-Framework marker `'use client'` размещается в framework binding или client entrypoint, а не в business.
-
-## Preset не является обязательным посредником
-
-### PRE-N011: Custom assembly остаётся допустимой
-
-Graph owner может напрямую вызвать factory:
-
-```ts
-const authApi = authFactory({
-  authPhone: customAuthPhoneAdapter,
-  session: memorySessionAdapter,
-})
-```
-
-Preset нужен для повторяемой готовой конфигурации. Он не ограничивает DI-возможности factory.
+Framework module не вызывает preset и не создаёт factory. Он получает готовый `AuthApi` от graph owner, поэтому React lifecycle не смешивается с concrete assembly.

@@ -48,21 +48,41 @@ const documentationSidebar = [
     ],
   },
   {
+    text: 'SLM Level 3',
+    items: [
+      { text: 'Обзор', link: '/level-3/' },
+      { text: 'Терминология', link: '/level-3/terminology' },
+      { text: 'Domain', link: '/level-3/domains/' },
+      { text: 'Business module', link: '/level-3/domains/business' },
+      { text: 'Factory, ports и adapters', link: '/level-3/domains/factory-ports-adapters' },
+      { text: 'Presets и SSR', link: '/level-3/domains/presets' },
+      { text: 'React module', link: '/level-3/domains/framework-bindings' },
+      { text: 'Зависимости', link: '/level-3/dependencies' },
+      { text: 'Тестирование', link: '/level-3/domains/testing' },
+      { text: 'Проверка', link: '/level-3/validation' },
+      { text: 'Auth как пример миграции', link: '/level-3/domains/auth-example' },
+      { text: 'Открытые вопросы', link: '/level-3/domains/open-questions' },
+    ],
+  },
+  {
     text: 'Правила',
     items: [
       { text: 'Как устроены правила', link: '/rules/' },
       { text: 'Реестр Level 1', link: '/rules/level-1' },
       { text: 'Реестр Level 2', link: '/rules/level-2' },
+      { text: 'Реестр Level 3', link: '/rules/level-3' },
     ],
   },
 ]
 
 export default defineConfig({
   srcDir: '../DRAFT',
-  srcExclude: ['README.md', 'level-3/**'],
+  srcExclude: ['README.md'],
   rewrites: {
     'level-1/README.md': 'level-1/index.md',
     'level-2/README.md': 'level-2/index.md',
+    'level-3/README.md': 'level-3/index.md',
+    'level-3/domains/README.md': 'level-3/domains/index.md',
     'rules/README.md': 'rules/index.md',
   },
   title: 'SLM Design',
@@ -92,6 +112,7 @@ export default defineConfig({
     nav: [
       { text: 'Level 1', link: '/level-1/' },
       { text: 'Level 2', link: '/level-2/' },
+      { text: 'Level 3', link: '/level-3/' },
       { text: 'Правила', link: '/rules/' },
     ],
     sidebar: documentationSidebar,
@@ -147,7 +168,7 @@ export default defineConfig({
     returnToTopLabel: 'Наверх',
     skipToContentLabel: 'Перейти к содержанию',
     footer: {
-      message: 'SLM Levels 1-2',
+      message: 'SLM Levels 1-3',
       copyright: 'Рабочий черновик архитектуры.',
     },
   },

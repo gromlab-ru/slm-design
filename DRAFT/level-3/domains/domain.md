@@ -1,206 +1,63 @@
-# Domain
+# Граница Domain
 
-> Рабочая заметка. Не является нормативным разделом спецификации.
+> Пояснение предметной и структурной границы Level 3.
 
-## Определение
+## Связанные правила
 
-### DOM-N003: Domain является границей владения предметной областью
+- [`SLM-L3-DOMAIN-R001`](../../rules/level-3.md#slm-l3-domain-r001)
+- [`SLM-L3-DOMAIN-A002`](../../rules/level-3.md#slm-l3-domain-a002)
+- [`SLM-L3-BUSINESS-R003`](../../rules/level-3.md#slm-l3-business-r003)
+- [`SLM-L1-MODULE-R011`](../../rules/level-1.md#slm-l1-module-r011)
+- [`SLM-L1-GROUP-R007`](../../rules/level-1.md#slm-l1-group-r007)
 
-Domain группирует business-контракт, concrete integrations, готовые presets и framework-specific bindings одной предметной области.
+## Предметная граница
 
-Примеры Domain:
+Domain представляет одну связную предметную область: `auth`, `catalog`, `orders` или `checkout`. Он собирает её business contract, concrete integrations, повторяемые assemblies и framework bindings, но не становится большим module со смешанными ролями.
 
-- `auth`;
-- `user`;
-- `catalog`;
-- `orders`;
-- `checkout`.
+Domain является предметной границей, а не владельцем runtime-кода в смысле Level 1. Каждый scenario, adapter, preset и framework binding остаётся ответственностью конкретного module. Такое разделение позволяет одной области иметь несколько public module APIs без нарушения правила о единственном владельце ответственности.
 
-Domain не является одним большим module. Он является границей, внутри которой могут находиться modules и logical groups с заданным направлением зависимостей.
-
-```text
-Domain
-├── business module
-├── presets group
-│   └── preset modules
-├── framework binding module или group
-└── optional reusable adapters group
-    └── adapter modules
-```
-
-## Предварительная структура
-
-```text
-domains/auth/
-├── business/
-│   ├── auth.factory.ts
-│   ├── errors/
-│   ├── lib/
-│   ├── services/
-│   ├── tests/
-│   ├── types/
-│   └── index.ts
-├── presets/
-│   └── {preset-name}/
-│       ├── adapters/
-│       ├── create-auth.ts
-│       ├── create-auth.test.ts
-│       └── index.ts
-└── {framework-binding}/
-    ├── hooks/
-    ├── providers/
-    ├── tests/
-    ├── ui/
-    └── index.ts
-```
-
-`{preset-name}` и `{framework-binding}` являются placeholders, а не обязательными именами папок. Preset называется по своему scope или назначению. Framework binding может быть оформлен как `react`, `bindings/react`, `framework/react` или по другому локальному соглашению.
-
-Environment-specific preset, включая server-only вариант, может быть добавлен отдельным preset module. SLM не требует заранее делить `presets` или `adapters` на `browser`, `server` и другие технические категории.
-
-## Возможные ветки Domain
-
-### DOM-N007: Domain не имеет фиксированного набора верхних папок
-
-| Роль | Типичная форма | Статус |
-|---|---|---|
-| Business | Один business module | Основная гипотеза Domain |
-| Presets | Logical group с preset modules | По наличию повторяемых assemblies |
-| Framework bindings | Module или logical group | По наличию framework integration |
-| Reusable adapters | Logical group с adapter modules | Только после promotion из владельца |
-| Tests | Segment конкретного module | Не создаётся в корне Domain |
-
-`model`, `types`, `errors`, `lib`, `ui`, `client` и `server` не становятся верхними Domain-разделами автоматически. Они размещаются внутри module-владельца либо появляются как локальное соглашение с отдельным обоснованием.
-
-## Иерархия сущностей
-
-### DOM-N004: Роль и структурный вид являются независимыми характеристиками
-
-Архитектурная роль отвечает на вопрос «какую ответственность выполняет код»:
-
-- business;
-- preset;
-- framework binding;
-- adapter.
-
-Структурный вид отвечает на вопрос «как оформлена граница кода»:
-
-- Domain;
-- module;
-- group;
-- segment;
-- file.
-
-```text
-Domain
-├── Module
-│   ├── Segment
-│   │   └── File
-│   └── File
-└── Group
-    ├── Module
-    └── Group
-        └── Module
-```
-
-Правила структурных видов:
-
-- Module владеет самостоятельной ответственностью и public API.
-- Group является logical directory для навигации, не имеет `index.ts`, runtime и собственных файлов реализации.
-- Segment существует внутри module, группирует его файлы по назначению и не имеет отдельного внешнего API.
-- Имя папки само по себе не доказывает её структурный вид.
-
-Пример классификации:
+## Структурные виды и роли
 
 | Путь | Роль | Структурный вид |
 |---|---|---|
 | `domains/auth` | Предметная область Auth | Domain |
 | `domains/auth/business` | Business | Module |
-| `domains/auth/business/services` | Business scenarios | Segment |
-| `domains/auth/business/tests` | Business tests | Segment |
-| `domains/auth/presets` | Навигация presets | Group |
-| `domains/auth/presets/{preset-name}` | Preset | Module |
-| `domains/auth/presets/{preset-name}/adapters` | Private adapters preset | Segment |
-| `domains/auth/{framework-binding}` | Framework binding | Module или Group по фактической границе |
-| `domains/auth/adapters` | Навигация promoted adapters | Optional group |
-| `domains/auth/adapters/{adapter-name}` | Reusable adapter | Module |
+| `domains/auth/business/ports` | Business capabilities | Segment |
+| `domains/auth/presets` | Навигация assemblies | Group |
+| `domains/auth/presets/application` | Application preset | Module |
+| `domains/auth/presets/application/adapters` | Private integrations preset | Segment |
+| `domains/auth/adapters` | Навигация promoted adapters | Group |
+| `domains/auth/adapters/identity-provider` | Reusable adapter | Module |
+| `domains/auth/react` | React binding | Module |
 
-## Публичные границы
+Role отвечает на вопрос, что делает код. Structural kind отвечает на вопрос, какую архитектурную границу он образует. Имя папки само по себе не доказывает ни роль, ни structural kind.
 
-### DOM-N005: Domain предоставляет отдельные public submodules
+## Корень Domain
 
-Предварительно Domain не имеет обязательного общего facade. Каждый public module предоставляет собственный entrypoint:
+Корень Domain не содержит реализацию, state, lifecycle resources, `index.ts` или общий barrel. Его прямыми детьми могут быть `business`, Groups `presets` и `adapters`, а также framework modules с именем framework, например `react`.
 
-```ts
-import { authFactory, validateAuthPhone } from '@/domains/auth/business'
-import { createApplicationAuth } from '@/domains/auth/presets/application'
-import { AuthProvider, useAuth } from '@/domains/auth/react'
-```
+Не создаются автоматически корневые ветки `model`, `types`, `errors`, `lib`, `ui`, `client`, `server` или `tests`. Такая ветка должна либо быть segment module-владельца, либо иметь самостоятельную module responsibility, выраженную одной из ролей Domain.
 
-`application` и `react` здесь являются только примерами пользовательских имён. Отдельные entrypoints не смешивают business, concrete assembly и framework code в одном import graph.
-
-Возможные public entrypoints:
+## Публичная граница
 
 ```text
 @/domains/auth/business
-@/domains/auth/presets/{preset-name}
-@/domains/auth/{framework-binding}
-@/domains/auth/adapters/{adapter-name}  # только для promoted adapter module
+@/domains/auth/presets/application
+@/domains/auth/react
 ```
 
-Private adapters внутри preset не получают собственного внешнего entrypoint.
+Эти пути являются public API role modules. Root path `@/domains/auth` не существует как runtime boundary. Он не должен объединять isomorphic business, client React и server-only preset через `export *`.
 
-### DOM-N006: Omnibus barrel для всего Domain опасен
-
-Такой entrypoint может связать изоморфный, client-only и server-only graphs:
-
-```ts
-// Не использовать как default-подход.
-export * from './business'
-export * from './presets/application'
-export * from './react'
-```
-
-Tree shaking не считается security boundary. Server-only submodule не должен быть достижим из изоморфного или client entrypoint даже через re-export.
-
-## Предварительное направление зависимостей
-
-```text
-business
-  ↑
-preset + private adapters
-
-готовый business API instance
-  ↑
-framework bindings / compositions
-```
-
-Более точная схема импортов:
-
-```text
-business -/→ adapters | presets | framework | infra concrete runtime
-preset-private adapters → business contracts + concrete runtime
-promoted adapter module → business contracts + concrete runtime
-presets → business factory + private or promoted adapters
-framework → business contracts + ready API or preset
-compositions → ready business API + framework bindings
-```
-
-Framework module может одновременно быть assembly site, если он явно владеет lifecycle API instance. Наличие папки `presets/` не даёт ей монополию на вызов factory.
-
-## Domain и compositions
-
-Domain владеет повторяемой доменной ответственностью. Composition по-прежнему владеет страницей, route tree, экраном и конкретным пользовательским outcome.
-
-Предварительная граница:
+## Граница с другими слоями
 
 | Ответственность | Владелец |
 |---|---|
-| Auth scenarios и contracts | `domains/auth/business` |
-| Private auth adapters одной assembly | Segment внутри соответствующего preset module |
-| Reusable auth adapter | Optional adapter module после promotion |
-| Повторяемая сборка AuthApi | Конкретный preset module или другой assembly site |
-| Auth React provider/access hook | Выбранный framework binding module |
-| Текст ошибки, redirect, экран и route outcome | Consumer composition |
+| Business scenarios, contracts, state semantics и errors | `domains/auth/business` |
+| Concrete adapter одной assembly | Segment соответствующего preset |
+| Reusable auth integration | Promoted adapter module |
+| Повторяемая assembly `AuthApi` | Preset module |
+| React provider, hook и domain-specific React UI | `domains/auth/react` |
+| Page, route, redirect, screen и конкретный visual outcome | Module `compositions` |
+| SDK wrapper или технический сервис без Auth semantics | Module `infra` |
 
-Граница domain-specific UI пока остаётся открытым вопросом.
+Framework dependency сама по себе не делает UI частью Domain. Component принадлежит `react` только когда он работает с domain contract и не определяет page, route или product composition.

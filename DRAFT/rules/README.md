@@ -51,6 +51,15 @@ SLM-L{level}-{group}-{class}{number}
 | `NESTED_MODULE` | Вложенные модули |
 | `LIFECYCLE` | Жизненный цикл |
 | `DOMAIN` | Домены |
+| `BUSINESS` | Business contracts |
+| `FACTORY` | Business factories |
+| `PORT` | Business ports |
+| `ADAPTER` | Adapters |
+| `PRESET` | Presets |
+| `ASSEMBLY` | Assembly и API instances |
+| `ENVIRONMENT` | Границы сред выполнения |
+| `FRAMEWORK` | Framework modules |
+| `TEST` | Verification и тестирование |
 
 Код раздела записывается полным английским именем в `UPPER_SNAKE_CASE`. Новый код добавляется в таблицу до первого использования.
 
@@ -117,3 +126,4 @@ SLM-L{level}-{group}-{class}{number}
 
 - [Первый уровень](./level-1.md)
 - [Второй уровень](./level-2.md)
+- [Третий уровень](./level-3.md)

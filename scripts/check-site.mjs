@@ -9,6 +9,7 @@ const siteBase = '/slm-design/'
 const ruleRegistries = [
   { source: path.join(repositoryRoot, 'DRAFT', 'rules', 'level-1.md'), route: 'rules/level-1' },
   { source: path.join(repositoryRoot, 'DRAFT', 'rules', 'level-2.md'), route: 'rules/level-2' },
+  { source: path.join(repositoryRoot, 'DRAFT', 'rules', 'level-3.md'), route: 'rules/level-3' },
 ]
 
 const expectedPages = [
@@ -31,9 +32,23 @@ const expectedPages = [
   'level-2/domains.html',
   'level-2/dependencies.html',
   'level-2/validation.html',
+  'level-3/index.html',
+  'level-3/terminology.html',
+  'level-3/dependencies.html',
+  'level-3/validation.html',
+  'level-3/domains/index.html',
+  'level-3/domains/domain.html',
+  'level-3/domains/business.html',
+  'level-3/domains/factory-ports-adapters.html',
+  'level-3/domains/presets.html',
+  'level-3/domains/framework-bindings.html',
+  'level-3/domains/testing.html',
+  'level-3/domains/auth-example.html',
+  'level-3/domains/open-questions.html',
   'rules/index.html',
   'rules/level-1.html',
   'rules/level-2.html',
+  'rules/level-3.html',
 ].sort()
 
 async function collectHtmlFiles(directory, prefix = '') {
@@ -151,7 +166,7 @@ if (!notFoundHtml.includes('Страница не найдена')) {
 }
 
 const sitemap = await readFile(path.join(distRoot, 'sitemap.xml'), 'utf8')
-for (const forbiddenRoute of ['/ru/', '/domains/', '/level-3/', '/specification/']) {
+for (const forbiddenRoute of ['/ru/', '/specification/']) {
   if (sitemap.includes(forbiddenRoute)) {
     throw new Error(`Sitemap contains archival or excluded route ${forbiddenRoute}`)
   }

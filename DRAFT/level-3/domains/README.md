@@ -1,86 +1,81 @@
-# Domains: рабочие заметки
+# Домены Level 3
 
-> Статус: исследовательский черновик. Материалы в этой папке не являются спецификацией и пока не задают обязательных правил SLM.
+> Пояснение строгой внутренней архитектуры Domain.
 
-Эта папка фиксирует текущую гипотезу о новой сущности `Domain`, business-модуле внутри неё, framework-neutral factory, ports, adapters, presets и framework bindings.
+Level 3 превращает доменный module Level 2 в Domain: немодульную предметную границу с несколькими modules разных технических ролей. Это не новый слой и не обязательный scaffold для каждого проекта.
 
-Level 3 развивает доменный модуль Level 2 в строгую доменную границу с несколькими модулями разных ролей. Такой переход может потребовать рефакторинга, но сохраняет предметного владельца и базовые модульные правила.
+## Связанные правила
 
-Идентификаторы вида `DOM-N001` и `FAC-N001` являются стабильными якорями заметок. Они нужны для обсуждения и последующего переноса решений в спецификацию, но не являются идентификаторами нормативных правил.
+- [`SLM-L3-DOMAIN-R001`](../../rules/level-3.md#slm-l3-domain-r001)
+- [`SLM-L3-DOMAIN-A002`](../../rules/level-3.md#slm-l3-domain-a002)
+- [`SLM-L3-BUSINESS-R003`](../../rules/level-3.md#slm-l3-business-r003)
+- [`SLM-L1-MODULE-A004`](../../rules/level-1.md#slm-l1-module-a004)
 
-## Основная формула
-
-```text
-Business определяет ЧТО делать.
-Ports описывают ЧТО business нужно.
-Factory создаёт business API из ports.
-Adapters реализуют ports в конкретной среде.
-Preset выбирает adapters, scope и lifecycle.
-Framework binding подключает готовый API к React, Vue, Next.js и другим фреймворкам.
-```
-
-Краткая схема:
+## Роли внутри Domain
 
 ```text
-                         ┌─ browser preset
-                         ├─ SSR request preset
-Business factory + ports ├─ server action preset
-                         ├─ per-test assembly
-                         └─ другой application preset
-
-готовый business API instance
-  ├─ framework bindings
-  ├─ compositions
-  └─ другие business factories через ports
+Business определяет поведение и contract.
+Ports описывают runtime capabilities business.
+Adapters реализуют ports поверх concrete runtime.
+Presets собирают API для execution context.
+React module адаптирует готовый API к React.
+Graph owner удерживает конкретный instance и выполняет lifecycle contract module-владельца.
 ```
 
-## Зафиксированные гипотезы
+| Роль | Структурный вид | Когда появляется |
+|---|---|---|
+| `business` | Обязательный module | Всегда |
+| Preset | Module внутри `presets` | Нужна повторяемая assembly |
+| Adapter | Private segment preset или module внутри `adapters` | Нужна concrete integration |
+| `react` | Framework module непосредственно в Domain | Domain имеет React integration |
 
-### DOM-N001: Domain является отдельной архитектурной сущностью
-
-Domain является границей владения одной предметной областью. Он содержит modules и logical groups с разной технической ролью, но общей доменной принадлежностью.
-
-### DOM-N002: Business внутри Domain является модулем
-
-`business` имеет собственную ответственность и public API, поэтому это module, а не segment. `types/`, `services/`, `errors/` и `lib/` внутри business остаются segments.
-
-### FAC-N001: Один business-контракт имеет одну factory
-
-Разные среды выполнения не требуют разных factories, если они предоставляют один и тот же API. Различия среды выражаются ports, adapters и presets.
-
-### PRE-N001: Одна factory допускает несколько presets
-
-Browser, SSR, server action, tests и другие контексты могут собирать одну factory с разными реализациями ports.
-
-### FAC-N002: Business и factory нейтральны к framework и environment
-
-Изоморфный business import graph не достигает React, Vue, Next.js, browser-only, server-only, SDK, storage implementations и других concrete runtimes.
-
-### PRE-N002: Среда является свойством preset
-
-Client/server/request различия определяются preset и выбранными adapters, а не `mode` внутри factory. Tests создают отдельную per-test assembly напрямую через factory и не требуют общего test preset.
-
-## Карта заметок
-
-- [Domain](./domain.md) - роль новой сущности, структура и публичные границы.
-- [Business](./business.md) - ответственность business-модуля, types, pure functions и errors.
-- [Factory, ports и adapters](./factory-ports-adapters.md) - контракт factory и требования изоморфности.
-- [Presets и SSR](./presets.md) - варианты сборки, lifecycle и защита server-only кода.
-- [Framework bindings](./framework-bindings.md) - React/Vue/Next-код внутри Domain.
-- [Тестирование](./testing.md) - границы тестов, factory-level contract, harness, adapters, presets, framework и UI.
-- [Auth как проверочный пример](./auth-example.md) - применение гипотез к реальному модулю.
-- [Открытые вопросы](./open-questions.md) - решения, которые ещё нельзя превращать в правила.
-
-## Предварительная структура приложения
+## Форма Domain
 
 ```text
-src/
-├── app/
-├── compositions/
-├── domains/
-├── infra/
-├── ui/
-└── shared/
+domains/auth/
+├── business/
+│   ├── errors/
+│   ├── lib/
+│   ├── ports/
+│   ├── services/
+│   ├── types/
+│   └── index.ts
+├── presets/
+│   └── application/
+│       ├── adapters/
+│       └── index.ts
+├── adapters/
+│   └── identity-provider/
+│       └── index.ts
+└── react/
+    ├── hooks/
+    ├── providers/
+    └── index.ts
 ```
 
-`domains/` пока рассматривается как новая верхнеуровневая область, заменяющая разнесение одной доменной ответственности между `business/{domain}` и `compositions/business/{domain}`.
+`business` обязателен; остальные ветки появляются по необходимости. `presets` и `adapters` являются Groups без собственного runtime/API. `errors`, `lib`, `ports`, `services`, `types`, `hooks` и `providers` являются segments соответствующих module-владельцев.
+
+Navigation Groups в слое `domains` допустимы, но не являются Domain и не изменяют его import boundary. Основные примеры Level 3 намеренно показывают Domain непосредственно в `domains`.
+
+## Public API modules
+
+Domain root не имеет `index.ts` и не реэкспортирует роли. Внешний consumer использует только public entrypoint нужного module:
+
+```ts
+import { authFactory, type AuthApi } from '@/domains/auth/business'
+import { createApplicationAuth } from '@/domains/auth/presets/application'
+import { AuthProvider, useAuth } from '@/domains/auth/react'
+```
+
+Private adapter внутри `presets/application/adapters` не получает external entrypoint. Promoted adapter module получает собственный API для modules Domain; доступ за пределами Domain допускается только как явно объявленная integration extension point.
+
+## Карта раздела
+
+- [Граница Domain](./domain.md)
+- [Business module](./business.md)
+- [Factory, ports и adapters](./factory-ports-adapters.md)
+- [Presets и SSR](./presets.md)
+- [React module](./framework-bindings.md)
+- [Тестирование](./testing.md)
+- [Auth как пример миграции](./auth-example.md)
+- [Открытые вопросы](./open-questions.md)

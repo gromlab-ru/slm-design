@@ -1,50 +1,35 @@
 # Business module внутри Domain
 
-> Рабочая заметка. Не является нормативным разделом спецификации.
+> Пояснение semantic core Domain.
+
+## Связанные правила
+
+- [`SLM-L3-BUSINESS-R003`](../../rules/level-3.md#slm-l3-business-r003)
+- [`SLM-L3-BUSINESS-A004`](../../rules/level-3.md#slm-l3-business-a004)
+- [`SLM-L3-PORT-R007`](../../rules/level-3.md#slm-l3-port-r007)
+- [`SLM-L1-MODULE-A004`](../../rules/level-1.md#slm-l1-module-a004)
 
 ## Роль
 
-### BUS-N001: Business является семантическим ядром Domain
+`business` -- единственный обязательный module Domain. Он владеет:
 
-Business-модуль владеет:
-
-- публичными бизнес-сценариями;
+- public business scenarios и `DomainApi`;
+- factory, `Deps` и ports;
 - business-owned types и contracts;
-- business API;
-- factory и ports;
-- детерминированными доменными правилами;
-- доменным error contract;
-- преобразованием внешних результатов в доменные результаты.
+- детерминированными rules, validation и normalization;
+- domain error contract;
+- семантикой domain state, commands и selectors.
 
-Business не владеет concrete runtime, environment wiring и framework integration.
+Business не владеет SDK, storage implementation, browser/Node API, framework integration, environment wiring или concrete state manager.
 
-## Public API business-модуля
+## Public API
 
-### BUS-N002: Business может экспортировать четыре категории сущностей
-
-| Категория | Примеры |
-|---|---|
-| Factory | `authFactory` |
-| Types и contracts | `AuthApi`, `AuthDeps`, `AuthState`, `AuthErrorCode` |
-| Pure domain functions | `normalizeAuthPhone`, `validateAuthPhone` |
-| Error observation contract | `AUTH_ERROR_CODES`, `AuthError`, `isAuthError` |
-
-Это заменяет старую гипотезу, что business `index.ts` может экспортировать в runtime только factory.
-
-Предварительный public API:
+Business entrypoint открывает только contract, нужный consumers, presets и adapters:
 
 ```ts
 export { authFactory } from './auth.factory'
-
-export {
-  AUTH_ERROR_CODES,
-  isAuthError,
-} from './errors/auth-error'
-
-export {
-  normalizeAuthPhone,
-  validateAuthPhone,
-} from './lib/auth-phone'
+export { AUTH_ERROR_CODES, isAuthError } from './errors/auth-error'
+export { normalizeAuthPhone, validateAuthPhone } from './lib/auth-phone'
 
 export type {
   AuthApi,
@@ -52,75 +37,40 @@ export type {
   AuthError,
   AuthErrorCode,
   AuthFactory,
+  AuthPhonePort,
+  AuthSessionPort,
   AuthState,
-}
+} from './types'
 ```
 
-## Types
+Port types экспортируются, потому что preset и promoted adapter реализуют именно эти contracts. `services`, private mappers, error constructor, source mapper, persistence key и concrete state runtime остаются закрытыми.
 
-### BUS-N003: Business contracts остаются внутри business
+## Types и pure functions
 
-Отдельный `model` submodule пока не требуется. Типы размещаются по ownership:
+`types`, `errors`, `lib`, `ports`, `services` и `tests` -- segments business module, а не отдельные Domain APIs. Type размещается у владельца:
 
-| Тип | Место |
+| Contract | Владелец |
 |---|---|
-| `AuthApi`, `AuthDeps`, `AuthState` | `domains/auth/business/types` |
-| `AuthError`, `AuthErrorCode` | `domains/auth/business/types` или `errors` |
-| SDK DTO | Adapter или infra runtime |
-| React provider props | Выбранный React binding module Domain |
-| View model конкретного screen | Consumer composition |
+| `AuthApi`, `AuthDeps`, `AuthState`, ports | `business` |
+| SDK DTO и transport error | Adapter или `infra` |
+| React provider props | `react` |
+| View model screen | Consumer composition |
 
-`types/` является segment business-модуля, а не самостоятельным общим хранилищем Domain.
+Pure domain function может быть public, только если она выражает business rule и имеет реального external consumer. Она получает все данные аргументами, детерминирована, не использует `Deps`, state, clock, random, environment или framework runtime.
 
-## Pure domain functions
-
-### BUS-N004: Детерминированная доменная функция может экспортироваться напрямую
-
-Pure domain function:
-
-- получает все данные через аргументы;
-- возвращает результат только на основе аргументов;
-- не использует `Deps`;
-- не выполняет I/O;
-- не читает mutable runtime state;
-- не зависит от clock, random, env или platform API;
-- не импортирует React, Vue, Next.js или state manager;
-- использует business language и реализует доменное правило.
-
-Примеры:
-
-```ts
-normalizeAuthPhone(value)
-validateAuthPhone(value)
-calculateOrderTotal(order)
-hasRequiredUserAgreements(user)
-```
-
-Consumer может использовать такую функцию для раннего UX feedback. Business scenario всё равно обязан повторно проверить вход на своей границе.
-
-### BUS-N005: Не каждая pure function становится public
-
-Функция остаётся private, если она нужна только одному service или является технической деталью реализации. Public export оправдан доменной семантикой и реальным внешним либо межмодульным consumer.
-
-Папки `domain/shared` и `domain/public` не создаются только ради видимости. Public contract определяется entrypoint business-модуля.
+Consumer может применять `validateAuthPhone` для раннего UX feedback, но public business scenario повторяет validation на своей границе.
 
 ## Domain errors
 
-### BUS-N006: Создание и наблюдение ошибки являются разными контрактами
-
-Business создаёт domain error. Consumer только распознаёт ошибку и читает поля, от которых зависит его поведение.
-
-Public observation contract:
+Каждый public runtime scenario выдаёт только domain failure contract. Source error, SDK class, HTTP status, response body и transport code не становятся consumer API.
 
 ```ts
 export const AUTH_ERROR_CODES = {
   PHONE_OTP_PHONE_INVALID: 'AUTH_PHONE_OTP_PHONE_INVALID',
+  PHONE_OTP_REQUEST_FAILED: 'AUTH_PHONE_OTP_REQUEST_FAILED',
   PHONE_OTP_VERIFY_CODE_INVALID: 'AUTH_PHONE_OTP_VERIFY_CODE_INVALID',
   PHONE_OTP_RESEND_TOO_SOON: 'AUTH_PHONE_OTP_RESEND_TOO_SOON',
 } as const
-
-export type AuthErrorCode =
-  (typeof AUTH_ERROR_CODES)[keyof typeof AUTH_ERROR_CODES]
 
 export type AuthError = Readonly<{
   code: AuthErrorCode
@@ -128,47 +78,14 @@ export type AuthError = Readonly<{
 }>
 
 export const isAuthError = (value: unknown): value is AuthError => {
-  // Structural runtime validation.
+  // Runtime validation of the public observation shape.
 }
 ```
 
-Private creation contract:
+Если public API использует exceptions, entrypoint экспортирует domain-specific guard, codes и read-only observation shape, но не constructor или source error mapper. Если проект выбирает discriminated `Result`, тот же contract должен быть выражен в result branch. Один business API не смешивает оба способа для одинаковых scenario.
 
-```ts
-class AuthBusinessError extends Error implements AuthError {
-  // Constructor, cause и source diagnostics.
-}
+## Domain state
 
-const createAuthBusinessError = (...) => {
-  // Source error mapping.
-}
-```
+Business определяет форму `AuthState`, начальное состояние, допустимые transitions и public observation contract. Concrete store, persistence, subscription source и framework hook реализуются снаружи business через ports/adapters.
 
-### BUS-N007: Error constructor не является consumer API
-
-Consumer не должен создавать `AuthBusinessError`, выбирать source mapping или подделывать business failure. Поэтому наружу предполагается экспортировать:
-
-- stable error code values;
-- error code type;
-- read-only observable error shape;
-- runtime guard или parser.
-
-Наружу не предполагается экспортировать:
-
-- error constructor;
-- error factory;
-- source error mapper;
-- transport-specific error data;
-- internal fallback selection.
-
-### BUS-N008: Одних типов недостаточно при throw-based API
-
-TypeScript не описывает checked exceptions. Для сигнатуры
-
-```ts
-(data: VerifyPhoneOtpData) => Promise<void>
-```
-
-значение в `catch` всё равно имеет тип `unknown`. Если consumer различает ошибки по `code`, business должен предоставить runtime discriminator либо перейти на typed `Result`.
-
-Выбор между throw + guard и typed `Result` пока не закрыт окончательно. Текущий минимальный путь совместимости: throw + public observation contract.
+Framework-neutral observation может иметь форму `getSnapshot` и `subscribe`. Это protocol business API, а не React hook или `StoreApi` конкретной библиотеки.
