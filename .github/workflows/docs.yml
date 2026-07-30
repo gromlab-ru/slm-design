@@ -5,17 +5,19 @@ on:
     branches: [master]
     paths:
       - '.github/workflows/docs.yml'
-      - 'docs/**'
+      - 'DRAFT/**'
       - 'site/**'
-      - 'scripts/check-docs.mjs'
+      - 'draft-rules.js'
+      - 'scripts/check-site.mjs'
       - 'package.json'
       - 'package-lock.json'
   pull_request:
     paths:
       - '.github/workflows/docs.yml'
-      - 'docs/**'
+      - 'DRAFT/**'
       - 'site/**'
-      - 'scripts/check-docs.mjs'
+      - 'draft-rules.js'
+      - 'scripts/check-site.mjs'
       - 'package.json'
       - 'package-lock.json'
   workflow_dispatch:
@@ -45,14 +47,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Check specification
-        run: npm run check:docs
-
-      - name: Build documentation
-        run: npm run docs:build
-
-      - name: Check documentation search
-        run: npm run check:docs-search
+      - name: Check documentation
+        run: npm run check:site
 
       - name: Configure Pages
         uses: actions/configure-pages@v5

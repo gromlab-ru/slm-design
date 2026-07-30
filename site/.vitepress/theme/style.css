@@ -71,7 +71,7 @@ html {
   font-size: clamp(2rem, 4vw, 2.65rem);
 }
 
-.vp-doc h3[id^='slm-l1-'] {
+.vp-doc h3[id^='slm-l'] {
   margin-top: 34px;
   scroll-margin-top: calc(var(--vp-nav-height) + var(--vp-layout-top-height) + 24px);
   color: var(--vp-c-brand-1);
@@ -81,7 +81,7 @@ html {
   letter-spacing: -0.02em;
 }
 
-.vp-doc h3[id^='slm-l1-'] + blockquote {
+.vp-doc h3[id^='slm-l'] + blockquote {
   position: relative;
   margin: 10px 0 24px;
   padding: 42px 20px 18px;
@@ -94,7 +94,7 @@ html {
   line-height: 1.7;
 }
 
-.vp-doc h3[id^='slm-l1-'] + blockquote::before {
+.vp-doc h3[id^='slm-l'] + blockquote::before {
   position: absolute;
   top: 14px;
   left: 20px;
@@ -106,23 +106,23 @@ html {
   text-transform: uppercase;
 }
 
-.vp-doc h3[id^='slm-l1-'][id*='-a'] + blockquote::before {
+.vp-doc h3[id^='slm-l'][id*='-a'] + blockquote::before {
   content: 'Автоматическая проверка';
 }
 
-.vp-doc h3[id^='slm-l1-'][id*='-r'] + blockquote::before {
+.vp-doc h3[id^='slm-l'][id*='-r'] + blockquote::before {
   content: 'Проверка на ревью';
 }
 
-.vp-doc h3[id^='slm-l1-'] + blockquote > p {
+.vp-doc h3[id^='slm-l'] + blockquote > p {
   margin: 0;
 }
 
-.vp-doc h3[id^='slm-l1-'] + blockquote > p + p {
+.vp-doc h3[id^='slm-l'] + blockquote > p + p {
   margin-top: 8px;
 }
 
-.vp-doc h3[id^='slm-l1-'] + blockquote strong:first-child {
+.vp-doc h3[id^='slm-l'] + blockquote strong:first-child {
   color: var(--vp-c-text-1);
   font-weight: 700;
 }
@@ -132,7 +132,7 @@ html {
     font-size: 16px;
   }
 
-  .vp-doc h3[id^='slm-l1-'] + blockquote {
+  .vp-doc h3[id^='slm-l'] + blockquote {
     margin-inline: -8px;
     padding: 42px 14px 14px;
   }

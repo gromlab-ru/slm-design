@@ -4,9 +4,12 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 
 const repositoryRoot = fileURLToPath(new URL('../', import.meta.url))
 const distRoot = path.join(repositoryRoot, 'site', '.vitepress', 'dist')
-const rulesSource = path.join(repositoryRoot, 'DRAFT', 'rules', 'level-1.md')
 const siteOrigin = 'https://site.test'
 const siteBase = '/slm-design/'
+const ruleRegistries = [
+  { source: path.join(repositoryRoot, 'DRAFT', 'rules', 'level-1.md'), route: 'rules/level-1' },
+  { source: path.join(repositoryRoot, 'DRAFT', 'rules', 'level-2.md'), route: 'rules/level-2' },
+]
 
 const expectedPages = [
   '404.html',
@@ -22,8 +25,15 @@ const expectedPages = [
   'level-1/nested-modules.html',
   'level-1/lifecycle.html',
   'level-1/validation.html',
+  'level-2/index.html',
+  'level-2/terminology.html',
+  'level-2/layers.html',
+  'level-2/domains.html',
+  'level-2/dependencies.html',
+  'level-2/validation.html',
   'rules/index.html',
   'rules/level-1.html',
+  'rules/level-2.html',
 ].sort()
 
 async function collectHtmlFiles(directory, prefix = '') {
@@ -100,10 +110,6 @@ for (const [relativePath, html] of htmlByPage) {
   }
 }
 
-const rulesMarkdown = await readFile(rulesSource, 'utf8')
-const ruleIds = [...rulesMarkdown.matchAll(/^### (SLM-L1-[A-Z_]+-[AR]\d{3})$/gm)]
-  .map((match) => match[1])
-const rulesHtml = htmlByPage.get('rules/level-1.html')
 const searchChunksDirectory = path.join(distRoot, 'assets', 'chunks')
 const searchChunks = (await readdir(searchChunksDirectory))
   .filter((file) => file.startsWith('@localSearchIndex') && file.endsWith('.js'))
@@ -115,18 +121,28 @@ if (searchChunks.length !== 1) {
 const searchModuleUrl = `${pathToFileURL(path.join(searchChunksDirectory, searchChunks[0])).href}?t=${Date.now()}`
 const searchData = JSON.parse((await import(searchModuleUrl)).default)
 const searchUrls = new Set(Object.values(searchData.documentIds))
+let ruleCount = 0
 
-for (const ruleId of ruleIds) {
-  const anchor = ruleId.toLowerCase()
-  const expectedUrl = `${siteBase}rules/level-1#${anchor}`
+for (const registry of ruleRegistries) {
+  const rulesMarkdown = await readFile(registry.source, 'utf8')
+  const ruleIds = [...rulesMarkdown.matchAll(/^### (SLM-L\d+-[A-Z_]+-[AR]\d{3})$/gm)]
+    .map((match) => match[1])
+  const rulesHtml = htmlByPage.get(`${registry.route}.html`)
 
-  if (!rulesHtml.includes(`id="${anchor}"`)) {
-    throw new Error(`Published registry does not contain anchor ${anchor}`)
+  for (const ruleId of ruleIds) {
+    const anchor = ruleId.toLowerCase()
+    const expectedUrl = `${siteBase}${registry.route}#${anchor}`
+
+    if (!rulesHtml.includes(`id="${anchor}"`)) {
+      throw new Error(`Published registry does not contain anchor ${anchor}`)
+    }
+
+    if (!searchUrls.has(expectedUrl)) {
+      throw new Error(`Local search index does not contain canonical record ${expectedUrl}`)
+    }
   }
 
-  if (!searchUrls.has(expectedUrl)) {
-    throw new Error(`Local search index does not contain canonical record ${expectedUrl}`)
-  }
+  ruleCount += ruleIds.length
 }
 
 const notFoundHtml = htmlByPage.get('404.html')
@@ -135,10 +151,10 @@ if (!notFoundHtml.includes('Страница не найдена')) {
 }
 
 const sitemap = await readFile(path.join(distRoot, 'sitemap.xml'), 'utf8')
-for (const forbiddenRoute of ['/ru/', '/domains/', '/specification/']) {
+for (const forbiddenRoute of ['/ru/', '/domains/', '/level-3/', '/specification/']) {
   if (sitemap.includes(forbiddenRoute)) {
     throw new Error(`Sitemap contains archival or excluded route ${forbiddenRoute}`)
   }
 }
 
-console.log(`Site check passed: ${actualPages.length - 1} pages and ${ruleIds.length} searchable rules.`)
+console.log(`Site check passed: ${actualPages.length - 1} pages and ${ruleCount} searchable rules.`)

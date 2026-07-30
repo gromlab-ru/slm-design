@@ -14,12 +14,12 @@ function slugifyHeading(value: string) {
     .replace(/[^\p{L}\p{N}_-]/gu, '')
     .replace(/-+/g, '-')
 
-  return ['app', 'compositions', 'infra', 'ui', 'shared'].includes(slug)
+  return ['app', 'compositions', 'domains', 'infra', 'ui', 'shared'].includes(slug)
     ? `layer-${slug}`
     : slug
 }
 
-const levelOneSidebar = [
+const documentationSidebar = [
   {
     text: 'SLM Level 1',
     items: [
@@ -37,23 +37,36 @@ const levelOneSidebar = [
     ],
   },
   {
+    text: 'SLM Level 2',
+    items: [
+      { text: 'Обзор', link: '/level-2/' },
+      { text: 'Терминология', link: '/level-2/terminology' },
+      { text: 'Слои', link: '/level-2/layers' },
+      { text: 'Домены', link: '/level-2/domains' },
+      { text: 'Зависимости', link: '/level-2/dependencies' },
+      { text: 'Проверка', link: '/level-2/validation' },
+    ],
+  },
+  {
     text: 'Правила',
     items: [
       { text: 'Как устроены правила', link: '/rules/' },
       { text: 'Реестр Level 1', link: '/rules/level-1' },
+      { text: 'Реестр Level 2', link: '/rules/level-2' },
     ],
   },
 ]
 
 export default defineConfig({
   srcDir: '../DRAFT',
-  srcExclude: ['README.md', 'domains/**'],
+  srcExclude: ['README.md', 'level-3/**'],
   rewrites: {
     'level-1/README.md': 'level-1/index.md',
+    'level-2/README.md': 'level-2/index.md',
     'rules/README.md': 'rules/index.md',
   },
   title: 'SLM Design',
-  description: 'Базовая архитектура фронтенд-приложений SLM Level 1',
+  description: 'Последовательная архитектура фронтенд-приложений SLM',
   lang: 'ru-RU',
   base: '/slm-design/',
   cleanUrls: true,
@@ -78,12 +91,10 @@ export default defineConfig({
     siteTitle: 'SLM Design',
     nav: [
       { text: 'Level 1', link: '/level-1/' },
-      { text: 'Правила', link: '/rules/level-1' },
+      { text: 'Level 2', link: '/level-2/' },
+      { text: 'Правила', link: '/rules/' },
     ],
-    sidebar: {
-      '/level-1/': levelOneSidebar,
-      '/rules/': levelOneSidebar,
-    },
+    sidebar: documentationSidebar,
     socialLinks: [{ icon: 'github', link: repositoryUrl }],
     search: {
       provider: 'local',
@@ -113,7 +124,7 @@ export default defineConfig({
     notFound: {
       code: '404',
       title: 'Страница не найдена',
-      quote: 'Запрошенная страница отсутствует в документации Level 1.',
+      quote: 'Запрошенная страница отсутствует в опубликованной документации SLM.',
       linkLabel: 'Перейти на главную',
       linkText: 'Вернуться к документации',
     },
@@ -136,7 +147,7 @@ export default defineConfig({
     returnToTopLabel: 'Наверх',
     skipToContentLabel: 'Перейти к содержанию',
     footer: {
-      message: 'SLM Level 1',
+      message: 'SLM Levels 1-2',
       copyright: 'Рабочий черновик архитектуры.',
     },
   },
