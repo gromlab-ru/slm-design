@@ -45,23 +45,6 @@ const levelOneSidebar = [
   },
 ]
 
-const rulesSidebar = [
-  {
-    text: 'Правила SLM',
-    items: [
-      { text: 'Формат и классификация', link: '/rules/' },
-      { text: 'Правила Level 1', link: '/rules/level-1' },
-    ],
-  },
-  {
-    text: 'Документация',
-    items: [
-      { text: 'Обзор Level 1', link: '/level-1/' },
-      { text: 'Проверка', link: '/level-1/validation' },
-    ],
-  },
-]
-
 export default defineConfig({
   srcDir: '../DRAFT',
   srcExclude: ['README.md', 'domains/**'],

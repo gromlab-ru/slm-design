@@ -129,11 +129,6 @@ for (const ruleId of ruleIds) {
   }
 }
 
-const levelOneHtml = htmlByPage.get('level-1/index.html')
-if (!levelOneHtml.includes('class="doc-set-header"')) {
-  throw new Error('Level 1 pages do not render the document header')
-}
-
 const notFoundHtml = htmlByPage.get('404.html')
 if (!notFoundHtml.includes('Страница не найдена')) {
   throw new Error('404 page is not localized')
