@@ -9,7 +9,6 @@ const siteBase = '/slm-design/'
 const ruleRegistries = [
   { source: path.join(repositoryRoot, 'DRAFT', 'rules', 'level-1.md'), route: 'rules/level-1' },
   { source: path.join(repositoryRoot, 'DRAFT', 'rules', 'level-2.md'), route: 'rules/level-2' },
-  { source: path.join(repositoryRoot, 'DRAFT', 'rules', 'level-3.md'), route: 'rules/level-3' },
 ]
 
 const expectedPages = [
@@ -18,6 +17,7 @@ const expectedPages = [
   'level-1/index.html',
   'level-1/terminology.html',
   'level-1/layers.html',
+  'level-1/domains.html',
   'level-1/dependencies.html',
   'level-1/modules.html',
   'level-1/groups.html',
@@ -28,27 +28,20 @@ const expectedPages = [
   'level-1/validation.html',
   'level-2/index.html',
   'level-2/terminology.html',
-  'level-2/layers.html',
-  'level-2/domains.html',
   'level-2/dependencies.html',
   'level-2/validation.html',
-  'level-3/index.html',
-  'level-3/terminology.html',
-  'level-3/dependencies.html',
-  'level-3/validation.html',
-  'level-3/domains/index.html',
-  'level-3/domains/domain.html',
-  'level-3/domains/business.html',
-  'level-3/domains/factory-ports-adapters.html',
-  'level-3/domains/presets.html',
-  'level-3/domains/framework-bindings.html',
-  'level-3/domains/testing.html',
-  'level-3/domains/auth-example.html',
-  'level-3/domains/open-questions.html',
+  'level-2/domains/index.html',
+  'level-2/domains/domain-package.html',
+  'level-2/domains/business.html',
+  'level-2/domains/factory-ports-adapters.html',
+  'level-2/domains/presets.html',
+  'level-2/domains/framework-bindings.html',
+  'level-2/domains/testing.html',
+  'level-2/domains/auth-example.html',
+  'level-2/domains/open-questions.html',
   'rules/index.html',
   'rules/level-1.html',
   'rules/level-2.html',
-  'rules/level-3.html',
 ].sort()
 
 async function collectHtmlFiles(directory, prefix = '') {
