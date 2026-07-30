@@ -1,6 +1,6 @@
-# Business module внутри Domain
+# Модуль бизнес-логики внутри домена
 
-> Пояснение semantic core Domain.
+> Пояснение смыслового центра домена.
 
 ## Связанные правила
 
@@ -11,20 +11,20 @@
 
 ## Роль
 
-`business` -- единственный обязательный module Domain. Он владеет:
+`business` — единственный обязательный модуль домена. Он владеет:
 
-- public business scenarios и `DomainApi`;
-- factory, `Deps` и ports;
-- business-owned types и contracts;
-- детерминированными rules, validation и normalization;
-- domain error contract;
-- семантикой domain state, commands и selectors.
+- публичными предметными сценариями и `DomainApi`;
+- фабрикой, типом зависимостей `Deps` и портами;
+- предметными типами и контрактами;
+- детерминированными правилами, проверкой и нормализацией данных;
+- публичным контрактом ошибок предметной области;
+- моделью состояния, командами и средствами чтения этого состояния.
 
-Business не владеет SDK, storage implementation, browser/Node API, framework integration, environment wiring или concrete state manager.
+Модуль `business` не владеет SDK, реализацией хранилища, API браузера или Node.js, связью с фреймворком, конфигурацией среды и конкретной системой управления состоянием.
 
-## Public API
+## Публичный API
 
-Business entrypoint открывает только contract, нужный consumers, presets и adapters:
+Точка входа `business` открывает только контракт, необходимый потребителям, сборкам и адаптерам:
 
 ```ts
 export { authFactory } from './auth.factory'
@@ -43,26 +43,26 @@ export type {
 } from './types'
 ```
 
-Port types экспортируются, потому что preset и promoted adapter реализуют именно эти contracts. `services`, private mappers, error constructor, source mapper, persistence key и concrete state runtime остаются закрытыми.
+Типы портов экспортируются, потому что сборки и самостоятельные адаптеры реализуют эти контракты. Сервисы, внутренние преобразователи, конструктор ошибки, преобразование исходной ошибки, ключ хранения и конкретный механизм состояния остаются закрытыми.
 
-## Types и pure functions
+## Типы и чистые функции
 
-`types`, `errors`, `lib`, `ports`, `services` и `tests` -- segments business module, а не отдельные Domain APIs. Type размещается у владельца:
+Каталоги `types`, `errors`, `lib`, `ports`, `services` и `tests` являются сегментами модуля `business`, а не отдельными API домена. Тип размещается у владельца:
 
-| Contract | Владелец |
+| Контракт | Владелец |
 |---|---|
-| `AuthApi`, `AuthDeps`, `AuthState`, ports | `business` |
-| SDK DTO и transport error | Adapter или `infra` |
-| React provider props | `react` |
-| View model screen | Consumer composition |
+| `AuthApi`, `AuthDeps`, `AuthState`, порты | `business` |
+| DTO SDK и транспортная ошибка | Адаптер или `infra` |
+| Свойства React-провайдера | `react` |
+| Модель представления экрана | Модуль-потребитель в `compositions` |
 
-Pure domain function может быть public, только если она выражает business rule и имеет реального external consumer. Она получает все данные аргументами, детерминирована, не использует `Deps`, state, clock, random, environment или framework runtime.
+Чистая предметная функция может быть публичной, только если выражает предметное правило и нужна реальному внешнему потребителю. Она получает все данные аргументами, детерминирована и не использует `Deps`, состояние, часы, генератор случайных значений, окружение или фреймворк.
 
-Consumer может применять `validateAuthPhone` для раннего UX feedback, но public business scenario повторяет validation на своей границе.
+Потребитель может применять `validateAuthPhone` для ранней подсказки в интерфейсе, но публичный сценарий повторно проверяет данные на собственной границе.
 
-## Domain errors
+## Ошибки предметной области
 
-Каждый public runtime scenario выдаёт только domain failure contract. Source error, SDK class, HTTP status, response body и transport code не становятся consumer API.
+При сбое публичный сценарий выдаёт только ошибку из контракта домена. Исходная ошибка, класс SDK, статус HTTP, тело ответа и транспортный код не становятся API потребителя.
 
 ```ts
 export const AUTH_ERROR_CODES = {
@@ -78,14 +78,14 @@ export type AuthError = Readonly<{
 }>
 
 export const isAuthError = (value: unknown): value is AuthError => {
-  // Runtime validation of the public observation shape.
+  // Проверка публичной формы ошибки во время выполнения.
 }
 ```
 
-Если public API использует exceptions, entrypoint экспортирует domain-specific guard, codes и read-only observation shape, но не constructor или source error mapper. Если проект выбирает discriminated `Result`, тот же contract должен быть выражен в result branch. Один business API не смешивает оба способа для одинаковых scenario.
+Если публичный API использует исключения, точка входа экспортирует проверку типа, коды и доступную только для чтения форму ошибки, но не её конструктор или преобразователь исходной ошибки. Если проект выбирает размеченный тип `Result`, тот же контракт выражается в ветви результата. Один API не смешивает оба способа для одинаковых сценариев.
 
-## Domain state
+## Состояние домена
 
-Business определяет форму `AuthState`, начальное состояние, допустимые transitions и public observation contract. Concrete store, persistence, subscription source и framework hook реализуются снаружи business через ports/adapters.
+Модуль `business` определяет форму `AuthState`, начальное состояние, допустимые переходы и публичный способ наблюдения. Конкретное хранилище, сохранение данных, источник подписки и хук фреймворка реализуются снаружи через порты и адаптеры.
 
-Framework-neutral observation может иметь форму `getSnapshot` и `subscribe`. Это protocol business API, а не React hook или `StoreApi` конкретной библиотеки.
+Независимый от фреймворка интерфейс наблюдения может состоять из `getSnapshot` и `subscribe`. Это часть API бизнес-логики, а не React-хук или `StoreApi` конкретной библиотеки.

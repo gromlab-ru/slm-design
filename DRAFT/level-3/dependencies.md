@@ -1,6 +1,6 @@
 # Зависимости Level 3
 
-> Уточнение графа зависимостей Level 2 внутри Domain.
+> Уточнение графа зависимостей Level 2 внутри домена.
 
 ## Связанные правила
 
@@ -9,40 +9,42 @@
 - [`SLM-L3-ENVIRONMENT-A012`](../rules/level-3.md#slm-l3-environment-a012)
 - [`SLM-L1-DEPENDENCY-A005`](../rules/level-1.md#slm-l1-dependency-a005)
 
-## Направление внутри Domain
+## Направление внутри домена
 
-| Исходный role module | Допустимые зависимости |
+| Исходный модуль | Допустимые зависимости |
 |---|---|
-| `business` | Собственные segments, нейтральный `shared`, ограниченные type-only contracts другого business module |
-| Adapter | Business contracts, `infra`, concrete runtime и neutral `shared` |
-| Preset | Business factory/contracts, private или promoted adapters |
-| `react` | Business contracts, готовый business API и React runtime |
-| Composition graph owner | Public preset, framework module и готовые API instances |
+| `business` | Собственные сегменты, нейтральные ресурсы `shared`, в ограниченных случаях — публичные типы другого модуля `business` |
+| Адаптер | Контракты `business`, модули `infra`, конкретная техническая реализация и нейтральные ресурсы `shared` |
+| Модуль группы `presets` | Фабрика и контракты `business`, закрытые или самостоятельные адаптеры |
+| `react` | Контракты `business`, готовый API и React |
+| Модуль-владелец графа | Публичные API модулей `business`, типовых сборок и модулей фреймворков, входящих в граф |
 
-Business не импортирует adapters, presets, framework modules, `infra`, product SDK, storage, framework runtime, browser/Node API или environment configuration. Adapter не импортирует preset или framework module. Preset не импортирует framework module.
+Модуль `business` не импортирует адаптеры, сборки, модули фреймворков, `infra`, продуктовые SDK, хранилища, API браузера или Node.js и конфигурацию среды. Адаптер не импортирует сборку или модуль фреймворка. Модуль сборки не импортирует модуль фреймворка.
 
 ## Междоменные зависимости
 
-Business одного Domain не создаёт factory другого Domain и не вызывает другой Domain runtime API напрямую. Если `orders` нужна capability авторизации, `orders/business` описывает собственный минимальный port, а graph owner передаёт реализацию над уже собранным `AuthApi`.
+Модуль `business` одного домена не создаёт фабрику другого домена и не вызывает его исполняемый API напрямую. Если домену `orders` нужны сведения об авторизации, `orders/business` описывает собственный минимальный порт, а владелец графа передаёт его реализацию поверх уже созданного `AuthApi`.
 
 ```text
-Auth preset
+сборка auth
   → AuthApi
-  → orders assembly
+  → сборка orders
   → OrdersApi
 ```
 
-Type-only import public business contract другого Domain допустим только при реальной ацикличной зависимости. Он не даёт права вызвать другой Domain runtime API. Direct runtime import даже pure function не является обходом port boundary: независимое общее правило должно принадлежать `shared`, а предметная capability передаётся через port.
+Импорт публичного типа из модуля `business` другого домена допустим только при реальной ацикличной зависимости. Такой импорт не разрешает вызывать API другого домена.
 
-## Environment boundaries
+Прямой импорт даже чистой функции не служит обходом порта. Независимое общее правило принадлежит `shared`, а предметная возможность другого домена передаётся через порт.
 
-Server-only preset или adapter получает отдельный public entrypoint и framework/build marker. Он не реэкспортируется через `business`, `react`, client-compatible preset или root Domain.
+## Границы сред выполнения
+
+Серверная сборка или адаптер получает отдельную публичную точку входа и предусмотренную фреймворком либо сборщиком метку:
 
 ```text
-business               # isomorphic
-presets/application    # client-compatible, если выбранные adapters совместимы
-presets/request        # server-only
-react                  # client framework module
+business               # подходит клиенту и серверу
+presets/application    # подходит клиенту, если совместимы адаптеры
+presets/request        # только сервер
+react                  # клиентский модуль React
 ```
 
-Путь `server/` или `client/` сам по себе ничего не доказывает. Проверяется transitive import graph entrypoint.
+Серверная точка входа не реэкспортируется через `business`, `react`, клиентскую сборку или корень домена. Путь `server/` или `client/` сам по себе ничего не доказывает: проверяется весь граф импортов, достижимый из точки входа.

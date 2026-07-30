@@ -2,72 +2,72 @@
 
 > Статус: рабочий черновик. Документы в этой папке не являются спецификацией.
 
-Level 3 предназначен для приложений с существенной доменной логикой, несколькими execution contexts или длительным сроком поддержки. Он не добавляет новый слой: он делает внутреннюю форму слоя `domains` явной и проверяемой.
+Level 3 предназначен для приложений со сложной предметной логикой, несколькими средами выполнения или длительным сроком поддержки. Он не добавляет новый слой, а задаёт явное и проверяемое устройство доменов внутри слоя `domains`.
 
 ## Когда выбирать Level 3
 
-Level 3 оправдан, когда предметная область имеет устойчивый business contract, несколько concrete integrations, отдельные browser/request/server assemblies, сложный lifecycle или независимую долгую поддержку.
+Level 3 оправдан, когда предметная область имеет устойчивый контракт бизнес-логики, несколько технических интеграций, разные способы сборки для браузера и сервера либо сложный жизненный цикл ресурсов.
 
-Количество файлов или размер проекта сами по себе не требуют перехода. Домен без такой сложности остаётся доменным модулем Level 2.
+Количество файлов или размер проекта сами по себе не требуют перехода. Предметная область без такой сложности оформляется доменным модулем Level 2.
 
 ## Наследование предыдущих уровней
 
-Проект Level 3 соблюдает определения и правила Levels 1-2, кроме явно заменённых положений.
+Проект Level 3 соблюдает определения и правила Level 1 и Level 2, кроме явно заменённых положений.
 
 | Положение | Статус в Level 3 |
 |---|---|
 | Порядок `app → compositions → domains → infra → ui → shared` | Сохраняется |
-| Модуль, Group, segment, component, public API и lifecycle | Сохраняют смысл Level 1 |
-| Доменный модуль Level 2 и [`SLM-L2-DOMAIN-R001`](../rules/level-2.md#slm-l2-domain-r001) | Заменяются Domain Level 3 |
-| Group внутри `domains` | Может содержать Domain, оставаясь только навигационной папкой |
-| Прямые дочерние modules Domain | Не являются вложенными modules, потому что Domain не является module |
+| Модуль, группа, сегмент, компонент, публичный API и жизненный цикл | Сохраняют смысл Level 1 |
+| Доменный модуль Level 2 и [`SLM-L2-DOMAIN-R001`](../rules/level-2.md#slm-l2-domain-r001) | Заменяются доменом Level 3 |
+| Группа внутри `domains` | Может содержать домены, оставаясь навигационной папкой |
+| Прямые дочерние модули домена | Не являются вложенными, потому что домен сам не является модулем |
 
-Domain не содержит исполняемого кода, поэтому не отменяет правило Level 1 о модульном владельце. Он задаёт предметную границу; конкретной ответственностью, public API и lifecycle по-прежнему владеет module.
+Домен не содержит исполняемого кода и не отменяет правило Level 1 о модульном владельце. Он задаёт предметную границу, а конкретной ответственностью, публичным API и жизненным циклом по-прежнему владеет модуль.
 
 ## Основная идея
 
 ```text
-Domain задаёт предметную границу.
-Business определяет contract и поведение.
-Ports описывают нужные business capabilities.
-Adapters связывают ports с concrete runtime.
-Presets собирают API для execution scope.
-Framework module адаптирует готовый API к framework.
-Graph owner удерживает API instance и выполняет lifecycle contract module-владельца.
+Домен задаёт предметную границу.
+Модуль бизнес-логики определяет правила, сценарии и публичный контракт.
+Порты описывают возможности, которые нужны бизнес-логике.
+Адаптеры реализуют порты в конкретной среде.
+Типовые сборки повторяемо создают API.
+Модуль фреймворка связывает готовый API с React, Vue или другим фреймворком.
+Владелец графа удерживает экземпляр API и завершает его жизненный цикл.
 ```
 
-## Базовая форма Domain
+## Базовая форма домена
 
 ```text
 src/domains/
-└── auth/                         # Domain
-    ├── business/                 # обязательный module
+└── auth/                         # домен
+    ├── business/                 # обязательный модуль
     │   ├── errors/
     │   ├── lib/
     │   ├── ports/
     │   ├── services/
     │   ├── types/
     │   └── index.ts
-    ├── presets/                  # optional Group
-    │   └── application/          # preset module
+    ├── presets/                  # необязательная группа
+    │   └── application/          # модуль типовой сборки
     │       ├── adapters/
     │       └── index.ts
-    ├── adapters/                 # optional Group
-    │   └── identity-provider/    # promoted adapter module
+    ├── adapters/                 # необязательная группа
+    │   └── identity-provider/    # самостоятельный модуль адаптера
     │       └── index.ts
-    └── react/                    # framework module
+    └── react/                    # модуль фреймворка
         ├── hooks/
         ├── providers/
         └── index.ts
 ```
 
-`business` обязателен. `presets`, `adapters` и framework modules появляются только при реальной ответственности. `types`, `errors`, `lib`, `services`, `tests`, `ui`, `client` и `server` не являются самостоятельными корневыми ветками Domain.
+Модуль `business` обязателен. Группы `presets` и `adapters`, а также модули фреймворков появляются только при реальной потребности. Каталоги `types`, `errors`, `lib`, `services`, `tests`, `ui`, `client` и `server` не становятся самостоятельными корневыми ветками домена.
 
-Domain может быть размещён непосредственно в `domains` или внутри навигационной Group. Groups допустимы, но не участвуют в основных примерах и не меняют границы Domain, направление зависимостей или доступность его role modules.
+Домен может находиться непосредственно в `domains` или внутри навигационной группы. Группа не меняет его границы, направление зависимостей и доступность модулей домена.
 
 ## Публичные границы
 
-Domain не имеет root runtime entrypoint. Внешний код импортирует public API конкретного role module:
+У корня домена нет общей точки входа для исполняемого кода. Внешний код импортирует публичный API конкретного модуля:
 
 ```ts
 import { authFactory, isAuthError } from '@/domains/auth/business'
@@ -75,22 +75,22 @@ import { createApplicationAuth } from '@/domains/auth/presets/application'
 import { AuthProvider, useAuth } from '@/domains/auth/react'
 ```
 
-`@/domains/auth/business` является public API отдельного module, а не deep import. Напротив, `@/domains/auth/business/services/...` и root import `@/domains/auth` нарушают границу.
+`@/domains/auth/business` является публичным API отдельного модуля, а не глубоким импортом. Пути вида `@/domains/auth/business/services/...` и общий импорт `@/domains/auth` нарушают границу.
 
 ## Карта черновика
 
 - [Терминология](./terminology.md)
-- [Граница Domain](./domains/domain.md)
-- [Business module](./domains/business.md)
-- [Factory, ports и adapters](./domains/factory-ports-adapters.md)
-- [Presets и SSR](./domains/presets.md)
-- [React module](./domains/framework-bindings.md)
+- [Граница домена](./domains/domain.md)
+- [Модуль бизнес-логики](./domains/business.md)
+- [Фабрика, порты и адаптеры](./domains/factory-ports-adapters.md)
+- [Типовые сборки и SSR](./domains/presets.md)
+- [Модуль React](./domains/framework-bindings.md)
 - [Зависимости](./dependencies.md)
 - [Тестирование](./domains/testing.md)
 - [Проверка](./validation.md)
-- [Auth как пример миграции](./domains/auth-example.md)
+- [Пример переноса домена](./domains/auth-example.md)
 - [Открытые вопросы](./domains/open-questions.md)
 
 ## Канонические правила
 
-Level 3 использует правила Levels 1-2 и [дополнительный реестр Level 3](../rules/level-3.md). Тематические документы объясняют правила, но не объявляют их повторно.
+Level 3 использует правила Level 1 и Level 2, а также [дополнительный реестр Level 3](../rules/level-3.md). Тематические документы объясняют правила, но не объявляют их повторно.

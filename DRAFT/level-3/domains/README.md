@@ -1,8 +1,8 @@
 # Домены Level 3
 
-> Пояснение строгой внутренней архитектуры Domain.
+> Пояснение строгой внутренней архитектуры домена.
 
-Level 3 превращает доменный module Level 2 в Domain: немодульную предметную границу с несколькими modules разных технических ролей. Это не новый слой и не обязательный scaffold для каждого проекта.
+Level 3 заменяет доменный модуль Level 2 немодульной предметной границей — доменом. Внутри неё размещаются модули с разными техническими ролями. Это не новый слой и не обязательный каркас для каждого проекта.
 
 ## Связанные правила
 
@@ -11,25 +11,25 @@ Level 3 превращает доменный module Level 2 в Domain: немо
 - [`SLM-L3-BUSINESS-R003`](../../rules/level-3.md#slm-l3-business-r003)
 - [`SLM-L1-MODULE-A004`](../../rules/level-1.md#slm-l1-module-a004)
 
-## Роли внутри Domain
+## Роли внутри домена
 
 ```text
-Business определяет поведение и contract.
-Ports описывают runtime capabilities business.
-Adapters реализуют ports поверх concrete runtime.
-Presets собирают API для execution context.
-React module адаптирует готовый API к React.
-Graph owner удерживает конкретный instance и выполняет lifecycle contract module-владельца.
+Модуль бизнес-логики определяет поведение и публичный контракт.
+Порты описывают возможности, которые нужны бизнес-логике.
+Адаптеры реализуют порты в конкретной среде.
+Типовые сборки повторяемо создают API.
+Модуль React связывает готовый API с React.
+Владелец графа удерживает экземпляр API и завершает его жизненный цикл.
 ```
 
 | Роль | Структурный вид | Когда появляется |
 |---|---|---|
-| `business` | Обязательный module | Всегда |
-| Preset | Module внутри `presets` | Нужна повторяемая assembly |
-| Adapter | Private segment preset или module внутри `adapters` | Нужна concrete integration |
-| `react` | Framework module непосредственно в Domain | Domain имеет React integration |
+| Бизнес-логика | Обязательный модуль `business` | Всегда |
+| Типовая сборка | Модуль внутри `presets` | Нужен повторяемый способ сборки |
+| Адаптер | Закрытый сегмент сборки или модуль внутри `adapters` | Нужна техническая интеграция |
+| Связь с React | Модуль `react` непосредственно в домене | Домен предоставляет API для React |
 
-## Форма Domain
+## Форма домена
 
 ```text
 domains/auth/
@@ -53,13 +53,13 @@ domains/auth/
     └── index.ts
 ```
 
-`business` обязателен; остальные ветки появляются по необходимости. `presets` и `adapters` являются Groups без собственного runtime/API. `errors`, `lib`, `ports`, `services`, `types`, `hooks` и `providers` являются segments соответствующих module-владельцев.
+Модуль `business` обязателен; остальные ветки появляются по необходимости. `presets` и `adapters` являются группами без собственного исполняемого кода и API. Каталоги `errors`, `lib`, `ports`, `services`, `types`, `hooks` и `providers` являются сегментами соответствующих модулей-владельцев.
 
-Navigation Groups в слое `domains` допустимы, но не являются Domain и не изменяют его import boundary. Основные примеры Level 3 намеренно показывают Domain непосредственно в `domains`.
+Навигационные группы в слое `domains` допустимы, но не являются доменами и не меняют их публичные границы. Основные примеры Level 3 показывают домены непосредственно в `domains`.
 
-## Public API modules
+## Публичные API модулей
 
-Domain root не имеет `index.ts` и не реэкспортирует роли. Внешний consumer использует только public entrypoint нужного module:
+Корень домена не имеет `index.ts` и не реэкспортирует дочерние модули. Внешний потребитель использует публичную точку входа нужного модуля:
 
 ```ts
 import { authFactory, type AuthApi } from '@/domains/auth/business'
@@ -67,15 +67,15 @@ import { createApplicationAuth } from '@/domains/auth/presets/application'
 import { AuthProvider, useAuth } from '@/domains/auth/react'
 ```
 
-Private adapter внутри `presets/application/adapters` не получает external entrypoint. Promoted adapter module получает собственный API для modules Domain; доступ за пределами Domain допускается только как явно объявленная integration extension point.
+Закрытый адаптер внутри `presets/application/adapters` не получает внешней точки входа. Адаптер, оформленный самостоятельным модулем, предоставляет минимальный публичный API. Доступ к нему за пределами домена допускается только как явно объявленная точка расширения интеграции.
 
 ## Карта раздела
 
-- [Граница Domain](./domain.md)
-- [Business module](./business.md)
-- [Factory, ports и adapters](./factory-ports-adapters.md)
-- [Presets и SSR](./presets.md)
-- [React module](./framework-bindings.md)
+- [Граница домена](./domain.md)
+- [Модуль бизнес-логики](./business.md)
+- [Фабрика, порты и адаптеры](./factory-ports-adapters.md)
+- [Типовые сборки и SSR](./presets.md)
+- [Модуль React](./framework-bindings.md)
 - [Тестирование](./testing.md)
-- [Auth как пример миграции](./auth-example.md)
+- [Пример переноса домена](./auth-example.md)
 - [Открытые вопросы](./open-questions.md)

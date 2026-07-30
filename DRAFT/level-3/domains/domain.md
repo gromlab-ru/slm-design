@@ -1,4 +1,4 @@
-# Граница Domain
+# Граница домена
 
 > Пояснение предметной и структурной границы Level 3.
 
@@ -12,31 +12,31 @@
 
 ## Предметная граница
 
-Domain представляет одну связную предметную область: `auth`, `catalog`, `orders` или `checkout`. Он собирает её business contract, concrete integrations, повторяемые assemblies и framework bindings, но не становится большим module со смешанными ролями.
+Домен представляет одну связную предметную область: `auth`, `catalog`, `orders` или `checkout`. Он объединяет её бизнес-логику, технические интеграции, повторяемые сборки и модули фреймворков, но не превращается в большой модуль со смешанными ролями.
 
-Domain является предметной границей, а не владельцем runtime-кода в смысле Level 1. Каждый scenario, adapter, preset и framework binding остаётся ответственностью конкретного module. Такое разделение позволяет одной области иметь несколько public module APIs без нарушения правила о единственном владельце ответственности.
+Домен является предметной границей, а не владельцем исполняемого кода в смысле Level 1. Каждый сценарий, адаптер и способ сборки принадлежит конкретному модулю. Поэтому одна предметная область может иметь несколько публичных API, не нарушая правило о единственном владельце ответственности.
 
 ## Структурные виды и роли
 
 | Путь | Роль | Структурный вид |
 |---|---|---|
-| `domains/auth` | Предметная область Auth | Domain |
-| `domains/auth/business` | Business | Module |
-| `domains/auth/business/ports` | Business capabilities | Segment |
-| `domains/auth/presets` | Навигация assemblies | Group |
-| `domains/auth/presets/application` | Application preset | Module |
-| `domains/auth/presets/application/adapters` | Private integrations preset | Segment |
-| `domains/auth/adapters` | Навигация promoted adapters | Group |
-| `domains/auth/adapters/identity-provider` | Reusable adapter | Module |
-| `domains/auth/react` | React binding | Module |
+| `domains/auth` | Предметная область авторизации | Домен |
+| `domains/auth/business` | Бизнес-логика | Модуль |
+| `domains/auth/business/ports` | Необходимые бизнес-логике возможности | Сегмент |
+| `domains/auth/presets` | Навигация по типовым сборкам | Группа |
+| `domains/auth/presets/application` | Сборка уровня приложения | Модуль |
+| `domains/auth/presets/application/adapters` | Закрытые адаптеры сборки | Сегмент |
+| `domains/auth/adapters` | Навигация по самостоятельным адаптерам | Группа |
+| `domains/auth/adapters/identity-provider` | Повторно используемый адаптер | Модуль |
+| `domains/auth/react` | Связь с React | Модуль |
 
-Role отвечает на вопрос, что делает код. Structural kind отвечает на вопрос, какую архитектурную границу он образует. Имя папки само по себе не доказывает ни роль, ни structural kind.
+Роль отвечает на вопрос, что делает код. Структурный вид определяет, какую архитектурную границу он образует. Имя папки само по себе не доказывает ни роль, ни структурный вид.
 
-## Корень Domain
+## Корень домена
 
-Корень Domain не содержит реализацию, state, lifecycle resources, `index.ts` или общий barrel. Его прямыми детьми могут быть `business`, Groups `presets` и `adapters`, а также framework modules с именем framework, например `react`.
+Корень домена не содержит реализацию, состояние, ресурсы жизненного цикла, `index.ts` или общий файл реэкспортов. Его прямыми детьми могут быть модуль `business`, группы `presets` и `adapters`, а также модули фреймворков, например `react`.
 
-Не создаются автоматически корневые ветки `model`, `types`, `errors`, `lib`, `ui`, `client`, `server` или `tests`. Такая ветка должна либо быть segment module-владельца, либо иметь самостоятельную module responsibility, выраженную одной из ролей Domain.
+Корневые ветки `model`, `types`, `errors`, `lib`, `ui`, `client`, `server` или `tests` не создаются автоматически. Такой каталог должен быть либо сегментом модуля-владельца, либо самостоятельным модулем с одной из допустимых ролей домена.
 
 ## Публичная граница
 
@@ -46,18 +46,18 @@ Role отвечает на вопрос, что делает код. Structural 
 @/domains/auth/react
 ```
 
-Эти пути являются public API role modules. Root path `@/domains/auth` не существует как runtime boundary. Он не должен объединять isomorphic business, client React и server-only preset через `export *`.
+Эти пути являются публичными API отдельных модулей. Корневого пути `@/domains/auth` для исполняемого кода не существует: он не должен объединять независимый от среды модуль `business`, клиентский React и серверную сборку через `export *`.
 
 ## Граница с другими слоями
 
 | Ответственность | Владелец |
 |---|---|
-| Business scenarios, contracts, state semantics и errors | `domains/auth/business` |
-| Concrete adapter одной assembly | Segment соответствующего preset |
-| Reusable auth integration | Promoted adapter module |
-| Повторяемая assembly `AuthApi` | Preset module |
-| React provider, hook и domain-specific React UI | `domains/auth/react` |
-| Page, route, redirect, screen и конкретный visual outcome | Module `compositions` |
-| SDK wrapper или технический сервис без Auth semantics | Module `infra` |
+| Предметные сценарии, контракты, модель состояния и ошибки | `domains/auth/business` |
+| Технический адаптер одной сборки | Сегмент соответствующего модуля в `presets` |
+| Повторно используемая интеграция авторизации | Самостоятельный модуль адаптера |
+| Повторяемая сборка `AuthApi` | Модуль в `presets` |
+| Провайдер, хук и относящийся к домену интерфейс React | `domains/auth/react` |
+| Страница, маршрут, перенаправление, экран и конкретный визуальный результат | Модуль `compositions` |
+| Обёртка над SDK или технический сервис без семантики авторизации | Модуль `infra` |
 
-Framework dependency сама по себе не делает UI частью Domain. Component принадлежит `react` только когда он работает с domain contract и не определяет page, route или product composition.
+Зависимость от фреймворка сама по себе не делает интерфейс частью домена. Компонент принадлежит `react`, только когда работает с контрактом домена и не определяет страницу, маршрут или продуктовую композицию.

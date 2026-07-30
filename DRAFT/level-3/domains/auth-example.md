@@ -1,10 +1,10 @@
-# Auth как пример миграции
+# Перенос домена `auth`
 
-> Проверочный пример Level 3. Он показывает направление декомпозиции, а не обязательный scaffold.
+> Проверочный пример Level 3. Он показывает направление изменений, а не обязательный каркас.
 
 ## Исходная проблема
 
-В более ранней форме SLM business contract Auth и concrete assembly могли находиться отдельно:
+В более ранней форме SLM контракт бизнес-логики домена `auth` и его техническая сборка могли находиться в разных местах:
 
 ```text
 business/auth/
@@ -21,7 +21,7 @@ compositions/business/auth/
 └── index.ts
 ```
 
-Такая форма отделяет pure business от concrete runtime, но разносит одну предметную область по разным архитектурным местам. Level 3 колоцирует их внутри Domain, не смешивая роли.
+Такое устройство отделяет бизнес-логику от конкретной среды, но разносит одну предметную область по разным архитектурным местам. Level 3 размещает эти части внутри одного домена, сохраняя границы между их ролями.
 
 ## Целевая форма
 
@@ -51,18 +51,18 @@ domains/auth/
 
 | Исходная часть | Назначение в Level 3 |
 |---|---|
-| `auth.factory.ts`, scenarios, validators, domain errors | `domains/auth/business` |
-| SDK, storage и state manager integration | Private adapters выбранного preset |
-| Повторяемый browser builder | `domains/auth/presets/application` |
-| Request-specific cookies, headers и client | `domains/auth/presets/request` |
-| React hooks, provider и domain UI | `domains/auth/react` |
-| Page text, redirect и screen outcome | Consumer composition |
+| `auth.factory.ts`, сценарии, проверки и ошибки домена | `domains/auth/business` |
+| SDK, хранилище и конкретная система управления состоянием | Закрытые адаптеры выбранной сборки |
+| Повторяемая сборка для браузерного приложения | `domains/auth/presets/application` |
+| Файлы cookie, заголовки и клиент одного запроса | `domains/auth/presets/request` |
+| React-хуки, провайдер и интерфейс домена | `domains/auth/react` |
+| Текст страницы, перенаправление и устройство экрана | Модуль-потребитель в `compositions` |
 
 ## Проверка границ
 
-`authFactory` не импортирует `useAuth`, `'use client'`, SDK или storage. React hook строится поверх готового `AuthApi`, например через framework-neutral `getSnapshot` и `subscribe`.
+`authFactory` не импортирует `useAuth`, `'use client'`, SDK или хранилище. React-хук строится поверх готового `AuthApi`, например через независимые от фреймворка методы `getSnapshot` и `subscribe`.
 
-Нормализация номера телефона может быть public pure business function:
+Нормализация номера телефона может быть публичной чистой функцией бизнес-логики:
 
 ```ts
 import {
@@ -71,11 +71,11 @@ import {
 } from '@/domains/auth/business'
 ```
 
-UI использует её для feedback, но `requestPhoneOtp` повторно валидирует значение внутри business scenario.
+Интерфейс использует её для ранней подсказки, но `requestPhoneOtp` повторно проверяет значение внутри предметного сценария.
 
-## Error contract
+## Контракт ошибок
 
-`AuthBusinessError` остаётся private implementation. Consumer получает только stable contract:
+`AuthBusinessError` остаётся закрытой реализацией. Потребитель получает только устойчивый контракт:
 
 ```ts
 import {
@@ -84,13 +84,13 @@ import {
 } from '@/domains/auth/business'
 ```
 
-Так React composition может выбрать сообщение или retry behavior по `code`, не зная SDK error, HTTP status или constructor private ошибки.
+Так композиция React может выбрать сообщение или поведение повторной попытки по `code`, не зная класс ошибки SDK, статус HTTP или закрытый конструктор.
 
-## Migration order
+## Порядок перехода
 
-1. Выделить `business` entrypoint и убедиться, что его transitive graph isomorphic.
-2. Перенести concrete runtime в adapters выбранного preset.
-3. Оформить повторяемую assembly как `presets/application`.
-4. Перенести hooks и Provider в `react`, передавая им готовый API.
-5. Сохранить page-specific UI и graph ownership в `compositions`.
-6. Добавить factory, adapter, preset и React boundary tests до удаления старого пути.
+1. Выделить точку входа `business` и убедиться, что её полный граф импортов не зависит от среды.
+2. Перенести конкретные технические реализации в адаптеры выбранной сборки.
+3. Оформить повторяемую сборку как `presets/application`.
+4. Перенести хуки и провайдер в `react`, передавая им готовый API.
+5. Сохранить интерфейс конкретной страницы и владение общим графом в `compositions`.
+6. Добавить тесты фабрики, адаптеров, сборки и границы React до удаления старого пути.

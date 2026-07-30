@@ -1,6 +1,6 @@
-# Factory, ports и adapters
+# Фабрика, порты и адаптеры
 
-> Пояснение runtime boundary business module.
+> Пояснение границы между бизнес-логикой и средой выполнения.
 
 ## Связанные правила
 
@@ -10,36 +10,36 @@
 - [`SLM-L3-ADAPTER-R008`](../../rules/level-3.md#slm-l3-adapter-r008)
 - [`SLM-L3-BUSINESS-A004`](../../rules/level-3.md#slm-l3-business-a004)
 
-## Factory и API instance
+## Фабрика и экземпляр API
 
 ```text
-Factory + implementations ports -> business API instance
+фабрика + реализации портов → экземпляр API бизнес-логики
 ```
 
-Factory принадлежит `business`, получает полный `AuthDeps` и возвращает `AuthApi`:
+Фабрика принадлежит модулю `business`, получает полный набор `AuthDeps` и возвращает `AuthApi`:
 
 ```ts
 export type AuthFactory = (deps: AuthDeps) => AuthApi
 ```
 
-Все presets одной factory предоставляют полный набор ports и получают одинаковый business API. Browser, request и server action не создают разные factory только из-за среды. Preset может открыть consumer суженный view API, но не меняет contract самой factory.
+Все типовые сборки одной фабрики предоставляют полный набор портов и получают API одного контракта. Браузер, обработчик запроса и серверное действие не требуют разных фабрик только из-за среды выполнения. Сборка может открыть потребителю более узкое представление API, но не меняет контракт фабрики.
 
-Factory construction создаёт только deterministic services и closures. Она не делает request, не читает cookies/storage/env, не запускает subscription/timer, не обращается к platform API, не выбирает adapter и не запускает framework lifecycle.
+Вызов фабрики создаёт только объекты и замыкания без побочных эффектов. Он не выполняет запросы, не читает файлы cookie, хранилище или переменные окружения, не запускает подписки и таймеры, не обращается к API платформы, не выбирает адаптер и не выполняет операции жизненного цикла фреймворка.
 
-## Isomorphic import graph
+## Независимый от среды граф импортов
 
-Проверяется весь production graph, достижимый из `business` entrypoint, а не только файл factory. Он не должен достигать:
+Проверяется весь граф рабочего кода, достижимый из точки входа `business`, а не только файл фабрики. Он не должен достигать:
 
-- React, Vue, Next.js и framework markers;
-- browser-only, Node-only, `client-only` или `server-only` boundary;
-- SDK, generated client, storage implementation или concrete state/query runtime;
-- adapters, presets, framework modules и environment configuration.
+- React, Vue, Next.js и служебных меток фреймворка;
+- границ `client-only`, `server-only`, API браузера или Node.js;
+- SDK, сгенерированного клиента, реализации хранилища или конкретной библиотеки состояния;
+- адаптеров, сборок, модулей фреймворков и конфигурации среды.
 
-Tree shaking не является доказательством изоляции. Type-only import concrete runtime создаёт ту же архитектурную зависимость и также запрещён.
+Удаление неиспользуемого кода при сборке не доказывает изоляцию. Импорт только типов из конкретной реализации создаёт ту же архитектурную зависимость и также запрещён.
 
-## Ports
+## Порты
 
-Port принадлежит business и описывает capability на business language:
+Порт принадлежит бизнес-логике и описывает возможность на языке предметной области:
 
 ```ts
 export type AuthPhonePort = {
@@ -54,21 +54,21 @@ export type AuthSessionPort = {
 }
 ```
 
-Port не принимает SDK client, generated operation, `Request`, `Window`, React hook, `StoreApi` или environment-specific type. Он абстрагирует implementation, а не доступность capability: optional port и method, который намеренно падает в одной среде, нарушают factory contract.
+Порт не принимает клиент SDK, сгенерированную операцию, `Request`, `Window`, React-хук, `StoreApi` или тип конкретной среды. Он отделяет контракт от реализации, а не скрывает отсутствие возможности. Необязательный порт или метод, который намеренно падает в одной из сред, нарушает контракт фабрики.
 
-`unknown` допустим только на границе непроверенного external result. Business обязан валидировать его до превращения в domain result, state или error. Если adapter уже может представить устойчивый business-owned result, port описывает именно этот result, а не concrete DTO.
+`unknown` допустим только на границе непроверенного внешнего результата. Бизнес-логика обязана проверить такое значение до преобразования в предметный результат, состояние или ошибку. Если адаптер уже может вернуть устойчивый предметный результат, порт описывает этот результат, а не DTO конкретного транспорта.
 
-## Adapters
+## Адаптеры
 
-Adapter соединяет business port и concrete runtime:
+Адаптер соединяет порт с конкретной технической реализацией:
 
 ```text
-business port <- adapter -> SDK / storage / platform / request input
+порт business ← адаптер → SDK / хранилище / платформа / данные запроса
 ```
 
-Adapter может преобразовать domain argument в transport argument, вызвать concrete source, нормализовать техническую форму к port contract и вернуть source failure. Он не определяет domain error code, business fallback, invariant или public method `AuthApi`.
+Адаптер может преобразовать предметные аргументы в транспортные, вызвать внешний источник, привести технический результат к контракту порта и вернуть исходный сбой. Он не определяет код ошибки домена, резервное предметное поведение, инвариант или публичный метод `AuthApi`.
 
-Default location -- private segment минимального preset owner:
+По умолчанию адаптер является закрытым сегментом минимальной типовой сборки:
 
 ```text
 domains/auth/presets/application/
@@ -77,7 +77,7 @@ domains/auth/presets/application/
 └── index.ts
 ```
 
-Если один adapter имеет несколько assembly consumers или самостоятельную integration responsibility, он становится promoted module:
+Если адаптер нужен нескольким сборкам или имеет самостоятельную ответственность интеграции, он становится отдельным модулем:
 
 ```text
 domains/auth/adapters/
@@ -85,4 +85,4 @@ domains/auth/adapters/
     └── index.ts
 ```
 
-Promoted adapter сохраняет минимальный public API. Его появление не делает concrete SDK частью public business contract.
+Самостоятельный адаптер сохраняет минимальный публичный API. Его появление не делает конкретный SDK частью публичного контракта `business`.

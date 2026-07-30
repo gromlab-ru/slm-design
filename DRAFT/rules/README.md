@@ -51,15 +51,15 @@ SLM-L{level}-{group}-{class}{number}
 | `NESTED_MODULE` | Вложенные модули |
 | `LIFECYCLE` | Жизненный цикл |
 | `DOMAIN` | Домены |
-| `BUSINESS` | Business contracts |
-| `FACTORY` | Business factories |
-| `PORT` | Business ports |
-| `ADAPTER` | Adapters |
-| `PRESET` | Presets |
-| `ASSEMBLY` | Assembly и API instances |
+| `BUSINESS` | Контракты бизнес-логики |
+| `FACTORY` | Фабрики бизнес-логики |
+| `PORT` | Порты бизнес-логики |
+| `ADAPTER` | Адаптеры |
+| `PRESET` | Типовые сборки |
+| `ASSEMBLY` | Сборка и экземпляры API |
 | `ENVIRONMENT` | Границы сред выполнения |
-| `FRAMEWORK` | Framework modules |
-| `TEST` | Verification и тестирование |
+| `FRAMEWORK` | Модули фреймворков |
+| `TEST` | Тестирование |
 
 Код раздела записывается полным английским именем в `UPPER_SNAKE_CASE`. Новый код добавляется в таблицу до первого использования.
 

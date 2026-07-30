@@ -1,6 +1,6 @@
-# Presets и SSR
+# Типовые сборки и SSR
 
-> Пояснение повторяемой assembly Domain.
+> Пояснение повторяемой сборки домена.
 
 ## Связанные правила
 
@@ -9,20 +9,20 @@
 - [`SLM-L3-ENVIRONMENT-A012`](../../rules/level-3.md#slm-l3-environment-a012)
 - [`SLM-L3-FACTORY-R006`](../../rules/level-3.md#slm-l3-factory-r006)
 
-## Роль preset
+## Роль типовой сборки
 
-Preset -- именованная повторяемая assembly одной business factory для конкретного execution context. Он выбирает concrete implementations ports, создаёт `AuthApi` и передаёт caller lifecycle operations, определённые module-владельцами resources.
+Модуль в группе `presets` задаёт именованный повторяемый способ создания API одной фабрики для конкретного контекста выполнения. Он выбирает реализации портов, создаёт `AuthApi` и передаёт вызывающему коду операции жизненного цикла, определённые модулями-владельцами ресурсов.
 
 ```text
 authFactory
-├── presets/application -> browser-compatible AuthApi
-├── presets/request     -> request-scoped AuthApi
-└── presets/server-action -> server action AuthApi
+├── presets/application   → AuthApi уровня приложения
+├── presets/request       → AuthApi одного запроса
+└── presets/server-action → AuthApi серверного действия
 ```
 
-Среда определяется preset и adapters, а не `mode` внутри factory. Tests создают per-test assembly напрямую через factory и не требуют общего `presets/testing`.
+Среда определяется выбранной сборкой и её адаптерами, а не параметром `mode` внутри фабрики. Тесты создают отдельную сборку напрямую через фабрику и не требуют общего модуля `presets/testing`.
 
-## Структура и public API
+## Структура и публичный API
 
 ```text
 domains/auth/presets/application/
@@ -32,7 +32,7 @@ domains/auth/presets/application/
 └── index.ts
 ```
 
-`application` -- пример имени. Preset называется по execution scope или устойчивому назначению: `application`, `request`, `server-action`. Он не называется по temporary consumer, если configuration не предназначена для повторного использования.
+`application` — только пример имени. Модуль называется по контексту выполнения или устойчивому назначению: `application`, `request`, `server-action`. Временный потребитель не должен давать имя повторно используемой конфигурации.
 
 ```ts
 export const createApplicationAuth = (): AuthApi => {
@@ -43,13 +43,13 @@ export const createApplicationAuth = (): AuthApi => {
 }
 ```
 
-Preset не добавляет scenario, не меняет error mapping и не скрывает business rule. Он также не становится монополией на factory: явный composition graph owner может собрать одноразовый graph, если он принимает на себя все обязанности assembly.
+Типовая сборка не добавляет сценарии, не меняет преобразование ошибок и не скрывает предметные правила. Одноразовый владелец графа может вызвать фабрику напрямую, если сам выбирает все порты и отвечает за жизненный цикл результата.
 
-## Scope и lifecycle
+## Область жизни
 
-Preset объявляет ожидаемый scope API instance. Application preset используется в application scope; request preset создаёт новый instance для каждого request. Graph owner удерживает instance только в этом scope и не хранит request data в application singleton.
+Модуль сборки объявляет ожидаемую область жизни экземпляра API. Сборка `application` используется в течение жизни приложения, а `request` создаёт новый экземпляр для каждого запроса. Владелец графа не хранит данные одного запроса в общем экземпляре приложения.
 
-Если assembly создаёт lifecycle resource, caller получает явный cleanup handle:
+Если сборка создаёт ресурс жизненного цикла, вызывающий код получает явную операцию очистки:
 
 ```ts
 export type AuthRequestAssembly = {
@@ -72,11 +72,11 @@ export const createAuthForRequest = (
 }
 ```
 
-Factory и preset construction не запускают I/O или subscriptions. Если domain lifecycle должен начать resource, module-владелец выражает это отдельной API operation; graph owner вызывает её после начала scope и выполняет предоставленный cleanup при его завершении.
+Создание API через фабрику или типовую сборку не запускает ввод-вывод и подписки. Если ресурс нужно запустить явно, модуль-владелец предоставляет отдельную операцию. Владелец графа вызывает её после начала своей области жизни и выполняет очистку при завершении.
 
-## Server-only boundary
+## Серверная граница
 
-Server preset имеет отдельный entrypoint и marker выбранного framework/build system:
+Серверная сборка имеет отдельную точку входа и служебную метку выбранного фреймворка или сборщика:
 
 ```ts
 import 'server-only'
@@ -84,6 +84,6 @@ import 'server-only'
 export { createAuthForRequest } from './create-auth-for-request'
 ```
 
-Этот entrypoint не реэкспортируется через `business`, `react` или client-compatible preset. Server adapter может иметь собственный marker для защиты от ошибочного прямого import.
+Эта точка входа не реэкспортируется через `business`, `react` или клиентскую сборку. Серверный адаптер также может иметь собственную метку, защищающую от ошибочного прямого импорта.
 
-Framework module не вызывает preset и не создаёт factory. Он получает готовый `AuthApi` от graph owner, поэтому React lifecycle не смешивается с concrete assembly.
+Модуль фреймворка не вызывает сборку и не создаёт фабрику. Он получает готовый `AuthApi` от владельца графа, поэтому жизненный цикл React не смешивается с технической сборкой зависимостей.

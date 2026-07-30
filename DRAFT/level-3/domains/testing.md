@@ -1,8 +1,8 @@
-# Тестирование Domain
+# Тестирование домена
 
-> Verification границ и behavior Level 3.
+> Проверка границ и поведения Level 3.
 
-## Связанное правило
+## Связанные правила
 
 - [`SLM-L3-TEST-R014`](../../rules/level-3.md#slm-l3-test-r014)
 - [`SLM-L3-FACTORY-R006`](../../rules/level-3.md#slm-l3-factory-r006)
@@ -10,21 +10,21 @@
 
 ## Принцип размещения
 
-Тест живёт у module-владельца проверяемой ответственности. У Domain нет общей корневой папки `tests/`.
+Тест находится рядом с модулем-владельцем проверяемой ответственности. У домена нет общей корневой папки `tests/`.
 
 | Проверяемая граница | Владелец теста |
 |---|---|
-| Business scenarios, state и domain errors | `business` |
-| Pure rule, mapper, parser или guard | Colocated segment `business` |
-| Concrete port implementation | Adapter |
-| Wiring, scope и cleanup assembly | Preset |
-| Provider, hook и React lifecycle | `react` |
-| Cross-domain graph | Composition graph owner |
-| Полный пользовательский поток | E2E entry приложения |
+| Предметные сценарии, состояние и ошибки домена | `business` |
+| Чистая функция бизнес-логики | Соответствующий сегмент `business` |
+| Реализация порта | Адаптер |
+| Выбор зависимостей, область жизни и очистка | Модуль в `presets` |
+| Провайдер, хук и жизненный цикл React | `react` |
+| Граф нескольких доменов | Модуль-владелец графа |
+| Полный пользовательский поток | Точка входа сквозного теста приложения |
 
-## Factory-level tests
+## Тесты через фабрику
 
-Factory-level tests являются главным доказательством public business behavior. Они импортируют только public API `business` и передают controlled ports:
+Тесты через фабрику являются главным доказательством публичного поведения бизнес-логики. Они импортируют только публичный API `business` и передают управляемые тестовые реализации портов:
 
 ```ts
 import {
@@ -43,28 +43,28 @@ it('maps source failure to domain error', async () => {
 })
 ```
 
-Factory-level suite проверяет форму public API, отсутствие side effects при construction, happy path, input validation, malformed port result, rejected promise, synchronous throw, domain error code, порядок effects, state transitions и значимые concurrent calls.
+Такой набор тестов проверяет форму публичного API, отсутствие побочных эффектов при создании, успешные и ошибочные сценарии, проверку входных данных, переходы состояния и порядок внешних операций.
 
-Business test не использует React, production SDK, storage или production preset. Если scenario нельзя проверить без них, runtime boundary проникла внутрь business.
+Тест `business` не использует React, реальный SDK, хранилище или типовую сборку приложения. Если сценарий нельзя проверить без них, техническая зависимость проникла внутрь бизнес-логики.
 
-## Test harness
+## Вспомогательная тестовая сборка
 
-Private test harness уменьшает boilerplate, но не является preset:
+Закрытая тестовая функция уменьшает повторение, но не является модулем в `presets`:
 
 ```ts
 const { api, ports, state } = createAuthTestHarness({ requestCode })
 ```
 
-Harness создаёт новый instance на каждый test case, допускает scenario-specific overrides и не экспортируется через production entrypoint. `presets/testing` не создаётся по умолчанию.
+Она создаёт новый экземпляр для каждого теста, допускает нужные сценарию замены и не экспортируется через рабочую точку входа. Модуль `presets/testing` по умолчанию не создаётся.
 
 ## Тесты остальных ролей
 
-Adapter test проверяет concrete operation, transport payload, mapping аргументов, raw result/error согласно port contract и subscription cleanup. Он не повторяет domain error mapping или scenario matrix.
+Тест адаптера проверяет вызванную техническую операцию, переданные данные, преобразование аргументов, результат или ошибку согласно контракту порта и очистку подписки. Он не повторяет преобразование ошибок домена и полный набор предметных сценариев.
 
-Preset test проверяет полный набор ports, выбор adapters, отсутствие I/O при construction, scope instance, передачу cleanup handle и server/client import boundary. Он не повторяет happy path business.
+Тест типовой сборки проверяет полный набор портов, выбор адаптеров, отсутствие ввода-вывода при создании, область жизни экземпляра, передачу операции очистки и границу клиента и сервера. Он не повторяет успешные предметные сценарии.
 
-React test получает fake `AuthApi` и проверяет Provider, access hook, update по `subscribe`, cleanup после unmount и поведение в Strict Mode. Smoke test с real factory добавляется только при отдельном integration risk.
+Тест React получает тестовый `AuthApi` и проверяет провайдер, хук доступа, обновление по `subscribe`, очистку после размонтирования и поведение в `StrictMode`. Минимальный интеграционный тест с настоящей фабрикой добавляется только при отдельном риске интеграции.
 
 ## Минимальный набор
 
-Файл test создаётся вместе с реальным risk, а не ради scaffold. Однако public business scenario не считается завершённым без factory-level tests; production preset без assembly test; adapter с нетривиальным transport mapping без adapter test; React binding с lifecycle behavior без framework test.
+Тест создаётся в ответ на реальный риск, а не ради заполнения каркаса. При этом публичный предметный сценарий требует теста через фабрику, типовая сборка приложения — теста сборки, адаптер с нетривиальным преобразованием данных — теста адаптера, а модуль React с поведением жизненного цикла — теста фреймворка.
