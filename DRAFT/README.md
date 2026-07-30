@@ -5,7 +5,7 @@
 ## Материалы
 
 - [Первый уровень](./level-1/README.md) - слои, доменные модули, публичные API и зависимости.
-- [Второй уровень](./level-2/README.md) - доменные пакеты, единый `DomainApi`, presets и Framework Groups.
+- [Второй уровень](./level-2/README.md) - доменные пакеты, именованные Domain API, assemblies и Framework Groups.
 - [Правила](./rules/README.md) - канонические наборы, формат и правила формулировки.
 
 ## Соглашение

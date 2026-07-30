@@ -1,6 +1,6 @@
 # Граница доменного пакета
 
-> Пояснение новой контейнерной сущности Level 2.
+> Пояснение контейнерной сущности Level 2 и её совместного использования с доменными модулями Level 1.
 
 ## Связанные правила
 
@@ -8,16 +8,18 @@
 - [`SLM-L2-DOMAIN-A003`](../../rules/level-2.md#slm-l2-domain-a003)
 - [`SLM-L2-GROUP-R004`](../../rules/level-2.md#slm-l2-group-r004)
 - [`SLM-L2-BUSINESS-R005`](../../rules/level-2.md#slm-l2-business-r005)
+- [`SLM-L2-DOMAIN-A026`](../../rules/level-2.md#slm-l2-domain-a026)
 - [`SLM-L2-BUSINESS-A019`](../../rules/level-2.md#slm-l2-business-a019)
-- [`SLM-L2-PRESET-A020`](../../rules/level-2.md#slm-l2-preset-a020)
+- [`SLM-L2-ASSEMBLY-A020`](../../rules/level-2.md#slm-l2-assembly-a020)
 - [`SLM-L2-ADAPTER-R021`](../../rules/level-2.md#slm-l2-adapter-r021)
-- [`SLM-L2-BUSINESS-A022`](../../rules/level-2.md#slm-l2-business-a022)
 
 ## Предметная граница
 
-Доменный пакет представляет одну связную предметную область и объединяет только принадлежащие ей SLM-модули. Пакет `auth` может содержать business-сценарии авторизации, её browser/server presets и React-модули, но не страницу профиля или общий database client.
+Доменный пакет представляет одну связную предметную область и объединяет только принадлежащие ей SLM-модули. Пакет `auth` может содержать business-сценарии авторизации, её browser/server assemblies и React-модули, но не страницу профиля или общий database client.
 
 Пакет не владеет исполняемой ответственностью. Конкретными API, состоянием, зависимостями и lifecycle владеют модули внутри него.
+
+Level 2 применяется к пакету, а не ко всему SLM root. Например, `auth` может быть пакетом Level 2, пока `catalog` и `news` остаются доменными модулями Level 1.
 
 ## Корень пакета
 
@@ -25,7 +27,7 @@
 domains/auth/
 ├── README.md
 ├── business/
-├── presets/
+├── assemblies/
 ├── adapters/
 └── react/
 ```
@@ -36,8 +38,8 @@ domains/auth/
 - ownership metadata;
 - декларативный manifest или декларативная конфигурация архитектурной проверки;
 - обязательный модуль `business`;
-- обязательная непустая Group `presets`;
-- непустая Group `adapters`, если фабрика имеет технические зависимости;
+- обязательная непустая Group `assemblies`;
+- непустая Group `adapters`, если хотя бы одна фабрика имеет технические зависимости;
 - Framework Groups при наличии соответствующих модулей.
 
 В корне запрещены:
@@ -48,48 +50,62 @@ domains/auth/
 - реэкспорт API внутренних модулей;
 - page-specific компоненты или сборка нескольких доменов.
 
-Metadata содержит только статические данные, не исполняется приложением, build tooling или проверяющим инструментом и не становится скрытым API пакета.
+Metadata содержит только статические данные. Проверяющий инструмент может читать её декларативно, но она не исполняется и не становится скрытым API пакета.
+
+## Policy boundary
+
+Доменный пакет не является узлом import-графа. Его техническая граница состоит из объявленного проверке набора дочерних модулей и правил, применяемых ко всем связям через эту границу.
+
+Отсутствие root barrel намеренно:
+
+- client- и server-entry points не агрегируются в один импорт;
+- каждый модуль сохраняет отдельную ответственность и environment boundary;
+- переименование публичного модуля является изменением его собственного контракта, а не скрывается пакетом;
+- versioning целого publishable package остаётся за пределами Level 2.
 
 ## Модули и Groups
 
-`business` размещается непосредственно в пакете и предоставляет три публичных фасета: type-only barrel, `factory` и `error`. Presets размещаются в обязательной Group `presets`. Все production adapters являются самостоятельными модулями Group `adapters` и не определяются в других частях production-графа. Framework Group называется по фреймворку: `react`, `vue` и аналогично.
+`business` размещается непосредственно в пакете. Assemblies находятся в обязательной Group `assemblies`. Production adapters являются самостоятельными модулями Group `adapters`. Framework Group называется по фреймворку: `react`, `vue` и аналогично.
 
 ```text
 auth/
 ├── business/                  # SLM-модуль
 │   ├── index.ts              # Только public types
-│   ├── factory.ts            # Public factory entry
-│   └── error.ts              # Public error runtime entry
+│   ├── factory.ts            # Public factories entry
+│   └── runtime.ts            # Необязательный deterministic runtime
 ├── adapters/                 # Group при наличии technical dependencies
 │   └── phone-http/           # SLM-модуль
-├── presets/                  # Обязательная Group
+├── assemblies/               # Обязательная Group
 │   └── browser/              # SLM-модуль
 └── react/                    # Framework Group
     ├── session/              # SLM-модуль
     └── login-form/           # SLM-модуль
 ```
 
-Groups не имеют `index.ts`. Поэтому публичными путями являются `auth/business`, `auth/business/factory`, `auth/business/error`, `auth/adapters/phone-http`, `auth/presets/browser` и `auth/react/session`, но не `auth`, `auth/adapters`, `auth/presets` или `auth/react`.
+Groups не имеют `index.ts`. Поэтому публичными путями являются `auth/business`, `auth/business/factory`, опциональный `auth/business/runtime`, `auth/adapters/phone-http`, `auth/assemblies/browser` и `auth/react/session`, но не `auth`, `auth/adapters`, `auth/assemblies` или `auth/react`.
 
 ## Навигационные Groups
 
-Слой `domains` может содержать навигационные Groups с пакетами:
+Слой `domains` может содержать Groups с обеими формами домена:
 
 ```text
 domains/
 └── commerce/                 # Навигационная Group
-    ├── catalog/              # Доменный пакет
-    └── orders/               # Доменный пакет
+    ├── catalog/              # Доменный модуль Level 1
+    └── orders/               # Доменный пакет Level 2
 ```
 
-Такая Group отличается от Group внутри пакета только допустимым составом: она содержит доменные пакеты и другие navigation Groups, а не модули.
+Такая Group отличается от Group внутри пакета допустимым составом: она содержит доменные модули, доменные пакеты и другие navigation Groups, а не внутренние модули пакета.
+
+Одна предметная область не представляется одновременно модулем и пакетом. Переход завершается удалением старой границы именно этого домена, а не переводом всех соседних областей.
 
 ## Границы соседних слоёв
 
 | Ответственность | Владелец |
 |---|---|
-| Предметные сценарии, `DomainApi`, доменные ошибки | `business` |
+| Предметные сценарии, Domain API, доменные ошибки | `business` |
 | Техническая реализация зависимости одного домена | Adapter внутри пакета |
+| Сборка API для именованного контекста | Assembly внутри пакета |
 | Универсальный технический сервис | `infra` |
 | Domain-specific framework API | Модуль внутри `react`, `vue` и аналогичной Group |
 | Страница, маршрут, redirect, продуктовый текст | `compositions` |

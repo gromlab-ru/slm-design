@@ -6,9 +6,11 @@
 
 - [`SLM-L2-TEST-R016`](../../rules/level-2.md#slm-l2-test-r016)
 - [`SLM-L2-BUSINESS-A019`](../../rules/level-2.md#slm-l2-business-a019)
-- [`SLM-L2-PRESET-A020`](../../rules/level-2.md#slm-l2-preset-a020)
+- [`SLM-L2-ASSEMBLY-A020`](../../rules/level-2.md#slm-l2-assembly-a020)
 - [`SLM-L2-ADAPTER-R021`](../../rules/level-2.md#slm-l2-adapter-r021)
 - [`SLM-L2-BUSINESS-A022`](../../rules/level-2.md#slm-l2-business-a022)
+- [`SLM-L2-ASSEMBLY-R023`](../../rules/level-2.md#slm-l2-assembly-r023)
+- [`SLM-L2-BUSINESS-R024`](../../rules/level-2.md#slm-l2-business-r024)
 
 ## Размещение
 
@@ -16,59 +18,74 @@
 
 | Проверяемая граница | Владелец теста |
 |---|---|
-| Предметные сценарии, `DomainApi`, данные и ошибки | `business` |
+| Сценарии, Domain API, данные и ошибки | `business` |
+| Публичная pure-функция или guard | `business/runtime` внутри тестов модуля business |
 | Техническое преобразование | Adapter |
-| Выбор зависимостей и environment boundary | Preset |
-| Provider, hook, form или guard | Соответствующий framework binding module |
+| Выбор API, dependencies и environment boundary | Assembly |
+| Provider, hook, query integration, form или guard | Соответствующий framework binding module |
 | Граф нескольких доменов | Модуль `composition`, точка входа `app` или другое место сборки |
 
 ## Business через фабрику
 
-Каждый публичный предметный сценарий проверяется через единственную фабрику с управляемыми зависимостями:
+Каждый публичный сценарий проверяется через фабрику владеющего им API с управляемыми dependencies:
 
 ```ts
-import type { AuthApi } from '@/domains/auth/business'
-import { authFactory } from '@/domains/auth/business/factory'
+import type { AuthSessionApi } from '@/domains/auth/business'
+import { authSessionFactory } from '@/domains/auth/business/factory'
 import {
   AUTH_ERROR_CODES,
   isAuthError,
-} from '@/domains/auth/business/error'
+} from '@/domains/auth/business/runtime'
 
-const api: AuthApi = authFactory(createAuthTestDeps({
-  requestCode: async () => ({ ok: true }),
+const api: AuthSessionApi = authSessionFactory(createAuthSessionTestDeps({
+  clock: { now: () => 1_700_000_000_000 },
+  phone: { requestCode: async () => ({ ok: true }) },
 }))
 
 await api.requestPhoneOtp('+79991112233')
 ```
 
-Набор проверяет успешные и ожидаемые ошибочные результаты, validation, преобразование внешних данных и публичные изменения состояния. Способ assertion для ошибки зависит от будущего решения `throw` или `Result`, но наружу всегда проверяется только AuthErrorCode.
+Набор проверяет успешные и ожидаемые ошибочные результаты, validation, преобразование внешних данных и публичные изменения состояния. Способ assertion для ошибки зависит от `throw` или `Result`, но наружу проверяется только собственный AuthErrorCode.
 
-Business-тест не использует React, реальный SDK, database или production preset. Локальная fake implementation допустима в тесте и не становится adapter-модулем, потому что не входит в production graph.
+Business-тест не использует React, реальный SDK, database, production assembly или системные clock/random. Локальная fake implementation допустима в тесте и не становится adapter-модулем, потому что не входит в production graph.
+
+Если `business` объявляет несколько API, каждый тестируется через свою фабрику. Общая внутренняя pure-логика не требует повторять одинаковые cases на уровне всех API.
 
 ## Остальные модули
 
-Тест каждого adapter-модуля проверяет технический вызов, аргументы, преобразование результата и передачу исходного сбоя business-слою. Он не повторяет mapping в доменные ошибки.
+Тест adapter-модуля проверяет технический вызов, аргументы, преобразование результата и передачу исходного сбоя business-слою. Он не повторяет mapping в доменные ошибки.
 
-Тест обязательного preset проверяет вызов `business/factory`, контракт возвращённого `DomainApi` и отсутствие несовместимого environment-кода. Если фабрика имеет технические зависимости, тест также проверяет выбранные публичные adapter-модули; adapterless preset проверяет корректную сборку без Group `adapters`.
+Тест обязательной assembly проверяет:
 
-Framework-тест импортирует только конкретный модуль, например `auth/react/session`, передаёт тестовый `AuthApi` и проверяет Provider, hook или component. `login-form` не повторяет полный набор business-сценариев.
+- вызов только нужных business-фабрик;
+- точный именованный состав возвращённого графа;
+- выбор публичных adapter-модулей;
+- отсутствие несовместимого environment-кода;
+- передачу cross-domain API аргументом, а не импортом;
+- cleanup handle, если assembly создаёт ресурс жизненного цикла.
+
+Assembly без собственного lifecycle-ресурса не тестирует пустой `dispose`, потому что не обязана его предоставлять.
+
+Framework-тест импортирует только конкретный модуль, например `auth/react/session`, передаёт тестовый `AuthSessionApi` и проверяет Provider, hook или component. Query binding дополнительно проверяет keys, invalidation и отсутствие raw DTO в публичном результате, но не повторяет полный набор business-сценариев.
 
 ## Автоматические структурные проверки
 
 Проверка файлов, exports и import-графа подтверждает:
 
 - отсутствие root API доменного пакета и Framework Groups;
-- наличие ровно трёх фасетов `business`, type-only exports в корневом barrel и отсутствие type exports в runtime-фасетах;
-- соблюдение матрицы потребителей `business`, `business/factory` и `business/error`;
-- наличие непосредственно в корне пакета непустой Group `presets` с объявленными модульными границами;
-- отсутствие runtime cross-domain imports;
-- отсутствие type-only импортов из чужих presets, adapters и framework-модулей;
+- обязательные `business` и `business/factory`, type-only exports в корневом barrel и допустимый опциональный `business/runtime`;
+- соблюдение матрицы потребителей фасетов business;
+- наличие непосредственно в корне пакета непустой Group `assemblies` с объявленными модульными границами;
+- отсутствие запрещённых runtime cross-domain imports;
+- отсутствие type-only импортов из чужих assemblies, adapters и framework-модулей;
 - отсутствие cross-domain framework hooks, contexts и components;
 - отсутствие server-only достижимости из client modules;
 - отсутствие runtime- и type-only циклов.
 
 ## Архитектурное ревью
 
-На ревью проверяется, что `business/factory` экспортирует только фабрику, а `business/error` только error codes и guards. Для каждой технической зависимости рассматриваются все production implementations: каждая должна принадлежать отдельному модулю Group `adapters`, даже если используется один раз. Inline implementations во всём production-графе запрещены, а test-only fakes из этой проверки исключены.
+На ревью проверяется, что `business/factory` экспортирует только объявленные фабрики, а `business/runtime` при наличии содержит только публичный deterministic runtime. Для каждой технической зависимости рассматриваются все production implementations: каждая связная implementation должна принадлежать одному модулю Group `adapters`, но один такой модуль может реализовать несколько тесно связанных capabilities одного provider.
+
+Отдельно проверяются прямые обращения business к `Date.now`, `Math.random`, `crypto.randomUUID`, timers, env и другим скрытым runtime-capabilities.
 
 Runtime-тест не заменяет автоматическую проверку или архитектурное ревью.

@@ -1,6 +1,6 @@
 # Модуль business
 
-> Пояснение единственного runtime-источника доменных данных и результатов.
+> Пояснение предметного владельца, нескольких Domain API и публичного deterministic runtime.
 
 ## Связанные правила
 
@@ -13,24 +13,26 @@
 - [`SLM-L2-BUSINESS-R018`](../../rules/level-2.md#slm-l2-business-r018)
 - [`SLM-L2-BUSINESS-A019`](../../rules/level-2.md#slm-l2-business-a019)
 - [`SLM-L2-BUSINESS-A022`](../../rules/level-2.md#slm-l2-business-a022)
+- [`SLM-L2-BUSINESS-R024`](../../rules/level-2.md#slm-l2-business-r024)
+- [`SLM-L2-BUSINESS-R025`](../../rules/level-2.md#slm-l2-business-r025)
 
 ## Роль
 
 `business` является обязательным SLM-модулем доменного пакета. Он владеет:
 
 - публичными предметными сценариями;
-- единым контрактом `DomainApi`;
-- одной публичной фабрикой;
-- типом явных зависимостей фабрики;
+- одним или несколькими именованными Domain API;
+- одной публичной фабрикой для каждого API;
+- типами явных зависимостей фабрик;
 - предметными типами и детерминированными правилами;
-- кодами, типом и runtime guard доменных ошибок;
+- контрактами ожидаемых доменных ошибок;
 - публичным представлением доменных данных и состояния.
 
-Приложение получает runtime-данные, состояние и результаты домена только через экземпляр `DomainApi`. Adapter, preset или framework binding module не открывает параллельный источник доменных данных.
+Несколько API остаются частью одного модуля, пока относятся к одной связной предметной области. Они нужны не для копирования use cases, а для независимой сборки разных наборов сценариев, зависимостей и сред.
 
-## Публичный API модуля
+## Публичные фасеты
 
-Один логический API `business` разделён на три фиксированных фасета.
+Один логический API модуля `business` имеет два обязательных и один необязательный entry point.
 
 ### Type-only barrel
 
@@ -38,11 +40,14 @@
 
 ```ts
 export type {
-  AuthApi,
-  AuthDeps,
+  AuthAdministrationApi,
+  AuthAdministrationDeps,
+  AuthAdministrationFactory,
   AuthError,
   AuthErrorCode,
-  AuthFactory,
+  AuthSessionApi,
+  AuthSessionDeps,
+  AuthSessionFactory,
   AuthState,
 } from './types'
 ```
@@ -51,73 +56,134 @@ export type {
 
 ```ts
 import type {
-  AuthApi,
-  AuthError,
-  AuthErrorCode,
+  AuthSessionApi,
+  AuthState,
 } from '@/domains/auth/business'
 ```
 
 ### Factory entry
 
-`business/factory.ts` экспортирует только runtime-фабрику:
+`business/factory.ts` экспортирует только именованные runtime-фабрики:
 
 ```ts
-export { authFactory } from './auth.factory'
-```
-
-```ts
-import { authFactory } from '@/domains/auth/business/factory'
-```
-
-### Error entry
-
-`business/error.ts` экспортирует только runtime-коды и guards:
-
-```ts
-export { AUTH_ERROR_CODES, isAuthError } from './errors/auth-error'
+export { authAdministrationFactory } from './factories/auth-administration.factory'
+export { authSessionFactory } from './factories/auth-session.factory'
 ```
 
 ```ts
 import {
-  AUTH_ERROR_CODES,
-  isAuthError,
-} from '@/domains/auth/business/error'
+  authAdministrationFactory,
+  authSessionFactory,
+} from '@/domains/auth/business/factory'
 ```
 
-`AuthError` и `AuthErrorCode` не реэкспортируются из `business/error`: все public types имеют один канонический путь через type-only barrel. Предметные validators, normalizers, constructors ошибок, source-error mappers, mutable store и технические DTO остаются закрытыми.
+Каждому API соответствует одна фабрика. Фасет не экспортирует готовые instances, adapters или environment-specific assembly.
 
-Другие внешние пути внутри `business` являются deep imports. Файлы `factory.ts` и `error.ts` являются фасетами одного SLM-модуля, а не сегментами или вложенными модулями.
+### Runtime entry
 
-## Потребители фасетов
-
-| Потребитель | `business` | `business/factory` | `business/error` |
-|---|---|---|---|
-| Adapter module своего домена | Type-only | Нет | Нет |
-| Preset своего домена | Type-only | Да | Нет |
-| Framework binding module своего домена | Type-only | Нет | Да |
-| `composition` или `app` | Type-only | Да | Да |
-| Модуль другого доменного пакета | Type-only | Нет | Нет |
-| Тест | Type-only | По границе тестируемого владельца | По границе тестируемого владельца |
-
-## Один DomainApi
+Необязательный `business/runtime.ts` экспортирует только публичные детерминированные значения и функции:
 
 ```ts
-export type AuthApi = {
+export {
+  AUTH_ERROR_CODES,
+  isAuthError,
+} from './errors/auth-error'
+
+export { normalizeAuthIdentifier } from './lib/normalize-auth-identifier'
+```
+
+Здесь допустимы error codes и guards, validators, value constructors, чистые продуктовые функции и immutable-константы. Все public types по-прежнему импортируются из корневого type-only barrel.
+
+`business/runtime` не содержит:
+
+- фабрики и готовые API instances;
+- I/O или изменяемое состояние;
+- state/query runtime;
+- чтение clock, random, environment или platform API;
+- сценарии, которым нужны runtime-зависимости.
+
+Если внешним потребителям не нужен детерминированный runtime, файл `runtime.ts` не создаётся. Другие внешние пути внутри `business` являются deep imports.
+
+## Несколько Domain API
+
+```ts
+export type AuthSessionApi = {
+  getCurrentSession: () => Promise<AuthState>
   getSnapshot: () => AuthState
   requestPhoneOtp: (phone: string) => Promise<void>
+  startInvalidationTracking: () => () => Promise<void>
   verifyPhoneOtp: (code: string) => Promise<void>
 }
 
-export type AuthFactory = (deps: AuthDeps) => AuthApi
+export type AuthAdministrationApi = {
+  revokeUserSessions: (userId: string) => Promise<void>
+}
 ```
 
-Все presets вызывают одну `authFactory` и создают `AuthApi` этого контракта. Preset может использовать другую техническую реализацию, но не добавляет метод и не меняет семантику сценария. Одноразовое место сборки в `composition` также может вызвать `business/factory`, используя публичные adapter-модули пакета, если фабрика имеет технические зависимости.
+`AuthSessionApi` может собираться в browser и request contexts, а `AuthAdministrationApi` только в доверенной server assembly. Browser assembly не получает метод-заглушку и не импортирует adapters административного API.
 
-Точная модель хранения, initial state, подписки и SSR snapshot пока остаётся открытым вопросом. Нормативной уже является публичная граница: приложение наблюдает доменное состояние через `DomainApi`, а не напрямую через adapter или framework store.
+Общий `business/factory` является публичным фасетом, а не гарантией отдельного business chunk для каждой фабрики. Разделение API устраняет обязательное создание лишних adapters и instances. Если самой business-логике нужны независимо поставляемые bundle boundaries, требуется отдельный build/package mechanism за пределами текущего Level 2, а не искусственное разделение предметной области.
 
-## Обязательный контракт ошибок
+Один публичный сценарий принадлежит ровно одному API. Если два API постоянно требуют одинаковых методов, состояния и lifecycle, их граница пересматривается вместо дублирования.
 
-Каждый `business` объявляет устойчивые коды, безопасную readonly-форму и runtime guard. Типы публикуются через `business`, а runtime symbols через `business/error`:
+Assembly может вернуть именованный граф нескольких API:
+
+```ts
+export type AuthBrowserGraph = Readonly<{
+  session: AuthSessionApi
+}>
+
+export type AuthRequestGraph = Readonly<{
+  administration: AuthAdministrationApi
+  session: AuthSessionApi
+}>
+```
+
+Такой граф является составом готовых контрактов для контекста, а не новым предметным API.
+
+## Предметная власть и состояние
+
+Business API остаются единственной границей, определяющей предметную модель, validation, переходы и семантику результатов. Это не означает, что только `business` физически хранит байты.
+
+Adapter или framework binding может использовать Zustand, TanStack Query, SWR, Apollo либо другой runtime для хранения и доставки значений. Такое хранилище является технической реализацией или проекцией, если:
+
+- значения получены или проверены business API либо `business/runtime`;
+- предметные переходы выполняются через business API;
+- внешний DTO не становится публичной моделью напрямую;
+- optimistic value создаётся или проверяется предметным владельцем;
+- библиотечные cache/store types не становятся Domain API.
+
+Подробная граница описана в [Состоянии и кэше](./state-cache.md).
+
+## Потребители фасетов
+
+| Потребитель | `business` | `business/factory` | `business/runtime` |
+|---|---|---|---|
+| Adapter своего домена | Type-only | Нет | Обычно нет |
+| Assembly своего домена | Type-only | Да | При необходимости |
+| Framework binding своего домена | Type-only | Нет | Да, если нужен public runtime |
+| `composition` или `app` | Type-only | Для одноразовой сборки | Да |
+| Код другого домена при связи с Level 2 | Type-only | Нет | Да |
+| Тест | Type-only | По границе тестируемого API | По границе тестируемого владельца |
+
+Runtime-импорт `business/runtime` другого домена остаётся архитектурным ребром и участвует в общей проверке циклов.
+
+## Контракт ошибок
+
+Ожидаемая ошибка имеет устойчивую безопасную readonly-форму:
+
+```ts
+export type AuthErrorCode =
+  | 'AUTH_PHONE_INVALID'
+  | 'AUTH_OTP_REQUEST_FAILED'
+  | 'AUTH_OTP_CODE_INVALID'
+
+export type AuthError = Readonly<{
+  code: AuthErrorCode
+}>
+```
+
+Если runtime-потребителям нужны constants или guard, они публикуются через `business/runtime`:
 
 ```ts
 export const AUTH_ERROR_CODES = {
@@ -126,41 +192,16 @@ export const AUTH_ERROR_CODES = {
   OTP_CODE_INVALID: 'AUTH_OTP_CODE_INVALID',
 } as const
 
-export type AuthErrorCode =
-  typeof AUTH_ERROR_CODES[keyof typeof AUTH_ERROR_CODES]
-
-export type AuthError = Readonly<{
-  code: AuthErrorCode
-}>
-
-const authErrorCodes = new Set<string>(Object.values(AUTH_ERROR_CODES))
-
 export const isAuthError = (value: unknown): value is AuthError => {
-  if (typeof value !== 'object' || value === null) {
-    return false
-  }
-
-  const prototype = Object.getPrototypeOf(value)
-  const keys = Reflect.ownKeys(value)
-
-  if (
-    (prototype !== Object.prototype && prototype !== null)
-    || keys.length !== 1
-    || keys[0] !== 'code'
-    || !('code' in value)
-  ) {
-    return false
-  }
-
-  return typeof value.code === 'string' && authErrorCodes.has(value.code)
+  return isSafeCodedError(value, Object.values(AUTH_ERROR_CODES))
 }
 ```
 
-Способ передачи ошибки, exception или discriminated `Result`, пока не закреплён. В обоих вариантах публичный сценарий сообщает ожидаемый сбой только через собственный `AuthError`.
+Guard не является обязательной частью каждого домена. При discriminated `Result` типизированному потребителю может быть достаточно error union; при exception, RPC или неизвестной runtime-границе guard часто нужен. Выбор `throw` или `Result` не меняет набор обязательных фасетов.
 
-## Изоляция технических ошибок
+## Изоляция технических и чужих ошибок
 
-Ошибки SDK, HTTP, database, storage и adapters не пересекают `DomainApi` в форме, доступной приложению. `business` преобразует обрабатываемый технический сбой в собственный код:
+Ошибки SDK, HTTP, database, storage и adapters не пересекают Domain API в форме, доступной приложению. `business` преобразует обрабатываемый технический сбой в собственный код:
 
 ```text
 SDK error
@@ -170,8 +211,8 @@ SDK error
   → приложение
 ```
 
-Публичная форма не включает исходные `message`, `status`, `payload`, `cause`, SDK class или сам объект ошибки. Диагностические данные могут сохраняться только во внутреннем механизме observability, контракт которого будет определён отдельно.
+Публичная форма не включает исходные `message`, `status`, `payload`, `cause`, SDK class или сам объект ошибки. Диагностические данные остаются во внутреннем observability-механизме.
 
-То же относится к cross-domain вызову. Если `UserApi` использует `AuthApi`, сбой, который становится результатом публичного сценария User, представлен собственным `UserError`, а не `AuthError`.
+То же относится к cross-domain вызову. Если User API использует Auth API, сбой, который становится результатом публичного сценария User, представлен собственным `UserError`. При exception-модели зависимый business может импортировать `isAuthError` и error codes из `auth/business/runtime`, после чего преобразовать ожидаемую ошибку в собственный контракт.
 
-Ошибки программирования и нарушенные внутренние инварианты не обязаны маскироваться под ожидаемые доменные ошибки. Способ отличить их от ожидаемых cross-domain ошибок при exception-модели и их диагностическая политика остаются открытыми вопросами; исходная ошибка при этом не добавляется в публичную форму DomainError.
+Ошибки программирования и нарушенные внутренние инварианты не обязаны маскироваться под ожидаемые доменные ошибки.

@@ -4,44 +4,49 @@
 
 ## Зафиксированные решения
 
-- Level 1 включает слой `domains` и простые доменные модули.
-- Level 2 заменяет доменный модуль доменным пакетом.
-- Корень пакета содержит только metadata, модули и Groups и не имеет executable API.
-- `business` предоставляет одну фабрику и один `DomainApi`.
-- Публичный API `business` разделён на type-only barrel, `business/factory` и `business/error`; другие пути запрещены.
-- Приложение получает доменные данные, состояние и результаты только через `DomainApi`.
-- Каждый `business` экспортирует коды, тип и runtime guard доменных ошибок.
-- Ожидаемые ошибки adapters и других доменов не пересекают API текущего домена.
-- Каждый доменный пакет содержит минимум один preset; универсальный изоморфный preset не обязателен.
-- При наличии технических зависимостей Group `adapters` обязательна, а каждая production implementation является отдельным SLM-модулем.
-- Все production consumers используют публичные adapter-модули; inline adapter implementations вне Group `adapters` запрещены.
-- Одноразовая composition может вызвать `business/factory` напрямую; это не отменяет обязательный preset пакета.
-- Runtime cross-domain imports запрещены; type-only business contracts разрешены и входят в DAG.
+- Level 1 является общей базой, а Level 2 применяется отдельно к выбранным предметным областям.
+- Доменный модуль Level 1 и доменный пакет Level 2 могут постоянно сосуществовать в одном SLM root.
+- Одна предметная область имеет только одну форму.
+- Корень пакета содержит только metadata, модуль `business` и допустимые Groups и не имеет executable API.
+- `business` может объявлять несколько независимо собираемых Domain API и одну фабрику для каждого API.
+- Публичный API `business` имеет обязательные type-only `business` и runtime `business/factory`, а также необязательный deterministic `business/runtime`.
+- Приложение получает предметную модель, transitions и результаты через Domain API; technical и framework cache могут хранить и проецировать эти значения.
+- Ожидаемые ошибки adapters и других доменов не пересекают API текущего домена в исходной форме.
+- Каждый доменный пакет содержит минимум одну assembly; универсальная изоморфная assembly не обязательна.
+- Assembly может создавать именованный граф нескольких API и не добавляет к ним сценарии.
+- При наличии технических зависимостей Group `adapters` обязательна, а каждая связная production implementation принадлежит adapter-модулю.
+- Runtime cross-domain imports через пакетную границу разрешены только из `business/runtime`; type-only public contracts разрешены и входят в DAG.
 - Framework Group называется по фреймворку и содержит самостоятельные SLM-модули.
 - Cross-domain framework state, hooks, contexts и components не импортируются.
+- Clock, timer, random, ID generator и environment являются явными dependencies business.
+- Assembly без собственного lifecycle-ресурса не обязана возвращать пустой `dispose`.
 
 ## Владение состоянием
 
-Нужно определить создание initial state, применение transitions, persistence и внешний event input. Нормативным уже является только то, что приложение читает состояние через `DomainApi`, но точная граница между business state machine и storage adapter пока не выбрана.
+Нужно подробнее определить создание initial state, применение transitions, persistence и внешний event input. Нормативным уже является то, что предметную модель и переходы определяет `business`, а concrete state manager реализует business-owned port либо framework projection.
 
 Отдельно требуется проверить SSR snapshot, hydration, concurrent rendering, reset и поведение после завершения request scope.
 
 ## Передача ошибок
 
-Нужно выбрать общую политику exception или discriminated `Result`, определить cancellation и unexpected failures, а также сериализацию ошибок через RPC и server actions.
+Нужно выбрать общую рекомендацию exception или discriminated `Result`, определить cancellation и unexpected failures, а также сериализацию ошибок через RPC и server actions.
 
-Для exception-модели отдельно нужно определить, как зависимый business отличает ожидаемую ошибку другого домена без runtime-импорта его guard: через переданный discriminator, wrapper места сборки или другой явный контракт.
+Структура публичных фасетов от этого решения больше не зависит: type errors публикуются через `business`, а необходимые runtime codes и guards через опциональный `business/runtime`.
 
 ## Технические порты
 
-Нужно определить, является ли consumer-owned port обязательной формой каждой технической зависимости и какие behavioral guarantees он обязан описывать: timeout, retry, cancellation, idempotency, ordering, concurrency и subscription cleanup.
+Нужно определить, является ли consumer-owned port обязательной формой каждой технической зависимости и какие behavioral guarantees он описывает: timeout, retry, cancellation, idempotency, ordering, concurrency и subscription cleanup.
 
-Cross-domain `Pick<OtherDomainApi>` уже зафиксирован как отдельный вид API dependency и не зависит от этого решения.
+Cross-domain API dependency уже зафиксирована как отдельный вид зависимости и не зависит от этого решения.
 
 ## Lifecycle сборки
 
-Нужно определить контракты `start` и `dispose`, async cleanup, rollback частичного старта, repeated disposal, request abort и поведение API после завершения scope. До решения применяется только общее владение lifecycle Level 1.
+Уже зафиксировано, что явная операция, запускающая ресурс, возвращает cleanup, а assembly с собственным ресурсом предоставляет cleanup handle результата. Ещё нужно определить async cleanup, rollback частичной сборки, repeated disposal, request abort и поведение API после завершения scope.
+
+## Cache hydration
+
+Нужно проверить единый способ разделять framework-neutral cache policy, client hooks, server prefetch и serialization boundary без утечки query-library types в Domain API.
 
 ## Автоматическая проверка
 
-Нужно выбрать machine-readable формат для domain packages, metadata, модулей, Groups, entry points, environment labels и запрещённых транзитивных импортов.
+Нужно выбрать machine-readable формат для форм домена, metadata, модулей, Groups, entry points, environment labels и запрещённых транзитивных импортов.
