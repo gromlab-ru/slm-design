@@ -9,6 +9,7 @@ on:
       - 'site/**'
       - 'draft-rules.js'
       - 'scripts/check-site.mjs'
+      - 'scripts/lib/slugify-heading.mjs'
       - 'package.json'
       - 'package-lock.json'
   pull_request:
@@ -18,6 +19,7 @@ on:
       - 'site/**'
       - 'draft-rules.js'
       - 'scripts/check-site.mjs'
+      - 'scripts/lib/slugify-heading.mjs'
       - 'package.json'
       - 'package-lock.json'
   workflow_dispatch:

@@ -9,6 +9,7 @@ import {
   IsString,
   Max,
   MaxLength,
+  Matches,
   Min,
   MinLength,
   ValidateNested,
@@ -243,6 +244,9 @@ export class CreateProductDto {
     example: "https://picsum.photos/seed/dock/640/480",
   })
   @IsString()
+  @Matches(/^https:\/\/picsum\.photos\//, {
+    message: "imageUrl must use the https://picsum.photos host",
+  })
   imageUrl!: string;
 }
 
@@ -298,6 +302,16 @@ export class CreateOrderItemDto {
   @Min(1)
   @Max(20)
   quantity!: number;
+
+  @ApiProperty({ example: 1, minimum: 1 })
+  @IsInt()
+  @Min(1)
+  expectedVersion!: number;
+
+  @ApiProperty({ example: 12990, minimum: 0 })
+  @IsInt()
+  @Min(0)
+  expectedUnitPriceCents!: number;
 }
 
 export class CreateOrderDto {

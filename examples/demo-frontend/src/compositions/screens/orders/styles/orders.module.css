@@ -1,0 +1,187 @@
+.root {
+  display: grid;
+  gap: 38px;
+  padding: clamp(48px, 8vw, 112px) clamp(18px, 7vw, 110px) 110px;
+}
+
+.header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 0.42fr);
+  gap: 40px;
+  align-items: end;
+  padding-bottom: 34px;
+  border-bottom: 1px solid var(--color-line);
+}
+
+.kicker {
+  color: var(--color-blue);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.header h1 {
+  max-width: 9ch;
+  margin-top: 14px;
+  font-family: var(--font-display);
+  font-size: clamp(3rem, 8vw, 7.4rem);
+  letter-spacing: -0.055em;
+  line-height: 0.8;
+}
+
+.lede {
+  color: var(--color-ink-muted);
+  font-size: 1rem;
+  line-height: 1.7;
+}
+
+.orders {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.order {
+  position: relative;
+  display: grid;
+  gap: 26px;
+  overflow: hidden;
+  padding: clamp(24px, 4vw, 38px);
+  border: 1px solid var(--color-line);
+  border-radius: 24px;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+}
+
+.orderIndex {
+  position: absolute;
+  right: -8px;
+  bottom: -22px;
+  color: color-mix(in srgb, var(--color-ink) 5%, transparent);
+  font-family: var(--font-display);
+  font-size: 9rem;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.orderHeader,
+.orderFooter,
+.line {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.orderHeader span,
+.line span {
+  color: var(--color-ink-faint);
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+}
+
+.orderHeader h2 {
+  margin-top: 6px;
+  font-family: var(--font-display);
+  font-size: 1.7rem;
+}
+
+.status {
+  padding: 8px 11px;
+  border-radius: 999px;
+  background: var(--color-surface-strong);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.status[data-status='pending'] {
+  color: #845300;
+  background: #ffe5ad;
+}
+
+.status[data-status='paid'] {
+  color: #215a00;
+  background: #dfffa0;
+}
+
+.status[data-status='shipped'] {
+  color: #123ec0;
+  background: #dae4ff;
+}
+
+.status[data-status='cancelled'] {
+  color: #8b2920;
+  background: #ffd9d5;
+}
+
+.lines {
+  position: relative;
+  z-index: 1;
+  display: grid;
+}
+
+.line {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--color-line);
+}
+
+.line strong {
+  font-size: 0.84rem;
+}
+
+.orderFooter {
+  padding-top: 4px;
+}
+
+.orderFooter > strong {
+  font-family: var(--font-mono);
+  font-size: 1rem;
+}
+
+.actionError {
+  padding: 14px 18px;
+  color: var(--color-error);
+  border-left: 5px solid var(--color-error);
+  background: color-mix(in srgb, var(--color-error) 8%, transparent);
+}
+
+.loading {
+  min-height: 380px;
+  border-radius: 24px;
+  background: var(--color-surface-strong);
+  animation: pulse 1s ease-in-out infinite alternate;
+}
+
+.outcome {
+  min-height: calc(100vh - 82px);
+  place-items: center;
+}
+
+.primaryLink {
+  padding: 14px 20px;
+  color: var(--color-paper);
+  border-radius: 999px;
+  background: var(--color-ink);
+  font-size: 0.72rem;
+  font-weight: 760;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+@keyframes pulse {
+  to {
+    opacity: 0.45;
+  }
+}
+
+@media (max-width: 850px) {
+  .header,
+  .orders {
+    grid-template-columns: 1fr;
+  }
+}

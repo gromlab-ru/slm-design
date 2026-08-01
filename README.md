@@ -4,10 +4,10 @@
 
 ## Структура
 
-- `DRAFT/` - рабочая документация Levels 1-2 и источник содержимого сайта.
+- `DRAFT/` - рабочая документация Levels 1-2, источник содержимого сайта и bundled references текущего skill.
 - `site/` - VitePress-конфигурация, тема и статические ресурсы.
 - `docs/` и `docs-v3/` - архивные версии документации, не используемые сайтом.
-- `old-docs/` - действующая legacy-документация для текущего skill.
+- `old-docs/` - архив legacy-документации, не используемый текущим skill.
 - `src-skills/` - исходники agent skills.
 - `skills/` - собранные skills для установки через `npx skills`.
 
@@ -16,11 +16,12 @@
 Требуется Node.js 20 или новее.
 
 ```bash
-npm run build
+npm run build:skill
+npm run check:skill
 npm run check
 ```
 
-`npm run build` пересобирает текущий `skills/slm-design/` из `old-docs/` и `src-skills/slm-design/`. `npm run check` дополнительно проверяет правила и собирает сайт из `DRAFT/`. Не редактируй собранные файлы вручную.
+`npm run build:skill` детерминированно пересобирает `skills/slm-design/` из `src-skills/slm-design/` и `DRAFT/`. `npm run check:skill` ничего не изменяет и проверяет, что tracked-артефакт актуален, ссылки разрешаются, а legacy references отсутствуют. `npm run check` дополнительно проверяет правила и собирает сайт. Не редактируй собранные файлы вручную.
 
 ## Установка
 

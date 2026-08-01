@@ -1,0 +1,4 @@
+interface:
+  display_name: "Template Generation"
+  short_description: "Шаблоны генерации и повторяемые структуры файлов"
+  default_prompt: "Use $template-generation to create, update, or apply file generation templates for repeatable project structures."

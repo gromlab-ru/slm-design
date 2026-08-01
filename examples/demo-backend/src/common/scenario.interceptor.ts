@@ -10,8 +10,8 @@ import {
   UnauthorizedException,
 } from "@nestjs/common";
 import type { Request, Response } from "express";
-import { Observable } from "rxjs";
-import { delay, map } from "rxjs/operators";
+import { fromEvent, Observable, timer } from "rxjs";
+import { delay, map, mergeMap, takeUntil } from "rxjs/operators";
 import { DEMO_SCENARIOS, type DemoScenario } from "./api.dto";
 
 function scenarioFromRequest(request: Request): DemoScenario {
@@ -80,9 +80,20 @@ export class ScenarioInterceptor implements NestInterceptor {
         : scenario === "timeout"
           ? Number(process.env.MOCK_TIMEOUT_DELAY_MS ?? 30000)
           : 0;
+    const isMutation = !["GET", "HEAD", "OPTIONS"].includes(request.method);
+    const source =
+      configuredDelay > 0 && isMutation
+        ? timer(configuredDelay).pipe(
+            takeUntil(fromEvent(response, "close")),
+            mergeMap(() => next.handle()),
+          )
+        : next
+            .handle()
+            .pipe(
+              configuredDelay > 0 ? delay(configuredDelay) : (value) => value,
+            );
 
-    return next.handle().pipe(
-      configuredDelay > 0 ? delay(configuredDelay) : (source) => source,
+    return source.pipe(
       map((payload) => this.transformPayload(payload, scenario)),
     );
   }

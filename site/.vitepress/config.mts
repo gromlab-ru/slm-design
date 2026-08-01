@@ -1,23 +1,9 @@
 import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'vitepress'
+import { slugifyHeading } from '../../scripts/lib/slugify-heading.mjs'
 
 const repositoryUrl = 'https://github.com/gromlab-ru/slm-design'
 const viteConfigPath = fileURLToPath(new URL('../vite.config.mts', import.meta.url))
-
-function slugifyHeading(value: string) {
-  const slug = value
-    .replace(/<[^>]+>/g, '')
-    .replace(/`/g, '')
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, '-')
-    .replace(/[^\p{L}\p{N}_-]/gu, '')
-    .replace(/-+/g, '-')
-
-  return ['app', 'compositions', 'domains', 'infra', 'ui', 'shared'].includes(slug)
-    ? `layer-${slug}`
-    : slug
-}
 
 const documentationSidebar = [
   {

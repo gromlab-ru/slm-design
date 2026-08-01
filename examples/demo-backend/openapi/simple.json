@@ -40,9 +40,7 @@
           }
         },
         "summary": "Check Simple API availability",
-        "tags": [
-          "Health"
-        ]
+        "tags": ["Health"]
       }
     },
     "/api/v1/auth/login": {
@@ -124,9 +122,7 @@
           }
         },
         "summary": "Login and receive JWT access/refresh tokens",
-        "tags": [
-          "Auth"
-        ]
+        "tags": ["Auth"]
       }
     },
     "/api/v1/auth/refresh": {
@@ -228,9 +224,7 @@
           }
         },
         "summary": "Rotate a refresh token and issue a new token pair",
-        "tags": [
-          "Auth"
-        ]
+        "tags": ["Auth"]
       }
     },
     "/api/v1/auth/logout": {
@@ -305,9 +299,7 @@
           }
         },
         "summary": "Revoke a refresh token; the operation is idempotent",
-        "tags": [
-          "Auth"
-        ]
+        "tags": ["Auth"]
       }
     },
     "/api/v1/users/me": {
@@ -404,9 +396,7 @@
           }
         ],
         "summary": "Get the authenticated user",
-        "tags": [
-          "Users"
-        ]
+        "tags": ["Users"]
       }
     },
     "/api/v1/products": {
@@ -488,12 +478,7 @@
             "schema": {
               "default": "newest",
               "type": "string",
-              "enum": [
-                "newest",
-                "price-asc",
-                "price-desc",
-                "name"
-              ]
+              "enum": ["newest", "price-asc", "price-desc", "name"]
             }
           }
         ],
@@ -540,9 +525,7 @@
           }
         },
         "summary": "List products using offset pagination, filters and sorting",
-        "tags": [
-          "Products"
-        ]
+        "tags": ["Products"]
       },
       "post": {
         "operationId": "SimpleProducts_create",
@@ -647,9 +630,7 @@
           }
         ],
         "summary": "Create a product as an administrator",
-        "tags": [
-          "Products"
-        ]
+        "tags": ["Products"]
       }
     },
     "/api/v1/products/{id}": {
@@ -742,9 +723,7 @@
           }
         },
         "summary": "Get one product with ETag support",
-        "tags": [
-          "Products"
-        ]
+        "tags": ["Products"]
       },
       "patch": {
         "operationId": "SimpleProducts_update",
@@ -877,9 +856,7 @@
           }
         ],
         "summary": "Update a product using optimistic locking",
-        "tags": [
-          "Products"
-        ]
+        "tags": ["Products"]
       },
       "delete": {
         "operationId": "SimpleProducts_remove",
@@ -992,9 +969,7 @@
           }
         ],
         "summary": "Delete a product as an administrator",
-        "tags": [
-          "Products"
-        ]
+        "tags": ["Products"]
       }
     },
     "/api/v1/categories": {
@@ -1036,9 +1011,7 @@
           }
         },
         "summary": "List product categories",
-        "tags": [
-          "Categories"
-        ]
+        "tags": ["Categories"]
       }
     },
     "/api/v1/categories/{id}": {
@@ -1128,9 +1101,7 @@
           }
         },
         "summary": "Get one category",
-        "tags": [
-          "Categories"
-        ]
+        "tags": ["Categories"]
       }
     },
     "/api/v1/orders": {
@@ -1256,9 +1227,7 @@
           }
         ],
         "summary": "List orders visible to the current user",
-        "tags": [
-          "Orders"
-        ]
+        "tags": ["Orders"]
       },
       "post": {
         "operationId": "SimpleOrders_create",
@@ -1346,6 +1315,16 @@
               }
             }
           },
+          "422": {
+            "description": "The validated request violates an order invariant.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "429": {
             "description": "Demo rate limit scenario.",
             "content": {
@@ -1373,9 +1352,7 @@
           }
         ],
         "summary": "Create an order and validate product stock",
-        "tags": [
-          "Orders"
-        ]
+        "tags": ["Orders"]
       }
     },
     "/api/v1/orders/{id}": {
@@ -1490,9 +1467,7 @@
           }
         ],
         "summary": "Get one visible order",
-        "tags": [
-          "Orders"
-        ]
+        "tags": ["Orders"]
       }
     },
     "/api/v1/orders/{id}/cancel": {
@@ -1617,9 +1592,7 @@
           }
         ],
         "summary": "Cancel an order if its state permits the transition",
-        "tags": [
-          "Orders"
-        ]
+        "tags": ["Orders"]
       }
     },
     "/api/v1/testing/scenarios": {
@@ -1661,9 +1634,7 @@
           }
         },
         "summary": "List deterministic X-Demo-Scenario values",
-        "tags": [
-          "Testing"
-        ]
+        "tags": ["Testing"]
       }
     },
     "/api/v1/testing/reset": {
@@ -1705,9 +1676,7 @@
           }
         },
         "summary": "Reset all Simple API state and token revocations",
-        "tags": [
-          "Testing"
-        ]
+        "tags": ["Testing"]
       }
     },
     "/api/v1/testing/seed/{preset}": {
@@ -1740,10 +1709,7 @@
             "required": true,
             "in": "path",
             "schema": {
-              "enum": [
-                "small",
-                "large"
-              ],
+              "enum": ["small", "large"],
               "type": "string"
             }
           }
@@ -1761,9 +1727,7 @@
           }
         },
         "summary": "Select a small or large deterministic dataset",
-        "tags": [
-          "Testing"
-        ]
+        "tags": ["Testing"]
       }
     },
     "/api/v1/testing/users/{userId}/role": {
@@ -1863,9 +1827,7 @@
           }
         },
         "summary": "Change a user role to exercise dynamic access control",
-        "tags": [
-          "Testing"
-        ]
+        "tags": ["Testing"]
       }
     }
   },
@@ -1896,17 +1858,12 @@
         "properties": {
           "application": {
             "type": "string",
-            "enum": [
-              "simple",
-              "complex"
-            ],
+            "enum": ["simple", "complex"],
             "example": "simple"
           },
           "status": {
             "type": "string",
-            "enum": [
-              "ok"
-            ],
+            "enum": ["ok"],
             "example": "ok"
           },
           "timestamp": {
@@ -1918,12 +1875,7 @@
             "example": "1.0.0"
           }
         },
-        "required": [
-          "application",
-          "status",
-          "timestamp",
-          "version"
-        ]
+        "required": ["application", "status", "timestamp", "version"]
       },
       "HealthResponseDto": {
         "type": "object",
@@ -1932,9 +1884,7 @@
             "$ref": "#/components/schemas/HealthDataDto"
           }
         },
-        "required": [
-          "data"
-        ]
+        "required": ["data"]
       },
       "LoginDto": {
         "type": "object",
@@ -1951,10 +1901,7 @@
             "minLength": 8
           }
         },
-        "required": [
-          "email",
-          "password"
-        ]
+        "required": ["email", "password"]
       },
       "JwtTokensDto": {
         "type": "object",
@@ -1972,18 +1919,11 @@
           },
           "tokenType": {
             "type": "string",
-            "enum": [
-              "Bearer"
-            ],
+            "enum": ["Bearer"],
             "example": "Bearer"
           }
         },
-        "required": [
-          "accessToken",
-          "refreshToken",
-          "expiresIn",
-          "tokenType"
-        ]
+        "required": ["accessToken", "refreshToken", "expiresIn", "tokenType"]
       },
       "SimpleUserDto": {
         "type": "object",
@@ -2003,10 +1943,7 @@
           },
           "role": {
             "type": "string",
-            "enum": [
-              "admin",
-              "customer"
-            ]
+            "enum": ["admin", "customer"]
           },
           "avatarUrl": {
             "type": "object",
@@ -2014,13 +1951,7 @@
             "example": "https://i.pravatar.cc/160?img=12"
           }
         },
-        "required": [
-          "id",
-          "email",
-          "name",
-          "role",
-          "avatarUrl"
-        ]
+        "required": ["id", "email", "name", "role", "avatarUrl"]
       },
       "JwtAuthDataDto": {
         "type": "object",
@@ -2032,10 +1963,7 @@
             "$ref": "#/components/schemas/SimpleUserDto"
           }
         },
-        "required": [
-          "tokens",
-          "user"
-        ]
+        "required": ["tokens", "user"]
       },
       "JwtAuthResponseDto": {
         "type": "object",
@@ -2044,9 +1972,7 @@
             "$ref": "#/components/schemas/JwtAuthDataDto"
           }
         },
-        "required": [
-          "data"
-        ]
+        "required": ["data"]
       },
       "ErrorDetailDto": {
         "type": "object",
@@ -2064,9 +1990,7 @@
             "example": "isEmail"
           }
         },
-        "required": [
-          "message"
-        ]
+        "required": ["message"]
       },
       "ErrorResponseDto": {
         "type": "object",
@@ -2121,9 +2045,7 @@
             "description": "Refresh token returned by login or the previous refresh call."
           }
         },
-        "required": [
-          "refreshToken"
-        ]
+        "required": ["refreshToken"]
       },
       "SimpleUserResponseDto": {
         "type": "object",
@@ -2132,9 +2054,7 @@
             "$ref": "#/components/schemas/SimpleUserDto"
           }
         },
-        "required": [
-          "data"
-        ]
+        "required": ["data"]
       },
       "Object": {
         "type": "object",
@@ -2166,10 +2086,7 @@
           },
           "currency": {
             "type": "string",
-            "enum": [
-              "USD",
-              "EUR"
-            ],
+            "enum": ["USD", "EUR"],
             "example": "USD"
           },
           "categoryId": {
@@ -2241,12 +2158,7 @@
             "minimum": 0
           }
         },
-        "required": [
-          "page",
-          "limit",
-          "total",
-          "totalPages"
-        ]
+        "required": ["page", "limit", "total", "totalPages"]
       },
       "ProductsResponseDto": {
         "type": "object",
@@ -2261,10 +2173,7 @@
             "$ref": "#/components/schemas/PageMetaDto"
           }
         },
-        "required": [
-          "data",
-          "meta"
-        ]
+        "required": ["data", "meta"]
       },
       "ProductResponseDto": {
         "type": "object",
@@ -2273,9 +2182,7 @@
             "$ref": "#/components/schemas/SimpleProductDto"
           }
         },
-        "required": [
-          "data"
-        ]
+        "required": ["data"]
       },
       "CreateProductDto": {
         "type": "object",
@@ -2295,10 +2202,7 @@
           },
           "currency": {
             "type": "string",
-            "enum": [
-              "USD",
-              "EUR"
-            ],
+            "enum": ["USD", "EUR"],
             "example": "USD"
           },
           "categoryId": {
@@ -2344,10 +2248,7 @@
           },
           "currency": {
             "type": "string",
-            "enum": [
-              "USD",
-              "EUR"
-            ],
+            "enum": ["USD", "EUR"],
             "example": "USD"
           },
           "categoryId": {
@@ -2371,9 +2272,7 @@
             "description": "Version last read by the frontend."
           }
         },
-        "required": [
-          "version"
-        ]
+        "required": ["version"]
       },
       "MutationResultDto": {
         "type": "object",
@@ -2387,10 +2286,7 @@
             "example": true
           }
         },
-        "required": [
-          "id",
-          "success"
-        ]
+        "required": ["id", "success"]
       },
       "MutationResponseDto": {
         "type": "object",
@@ -2399,9 +2295,7 @@
             "$ref": "#/components/schemas/MutationResultDto"
           }
         },
-        "required": [
-          "data"
-        ]
+        "required": ["data"]
       },
       "SimpleCategoryDto": {
         "type": "object",
@@ -2423,12 +2317,7 @@
             "example": 4
           }
         },
-        "required": [
-          "id",
-          "name",
-          "slug",
-          "productCount"
-        ]
+        "required": ["id", "name", "slug", "productCount"]
       },
       "CategoriesResponseDto": {
         "type": "object",
@@ -2440,9 +2329,7 @@
             }
           }
         },
-        "required": [
-          "data"
-        ]
+        "required": ["data"]
       },
       "CategoryResponseDto": {
         "type": "object",
@@ -2451,9 +2338,7 @@
             "$ref": "#/components/schemas/SimpleCategoryDto"
           }
         },
-        "required": [
-          "data"
-        ]
+        "required": ["data"]
       },
       "SimpleOrderItemDto": {
         "type": "object",
@@ -2475,12 +2360,7 @@
             "example": 12990
           }
         },
-        "required": [
-          "productId",
-          "productName",
-          "quantity",
-          "unitPriceCents"
-        ]
+        "required": ["productId", "productName", "quantity", "unitPriceCents"]
       },
       "SimpleOrderDto": {
         "type": "object",
@@ -2495,12 +2375,7 @@
           },
           "status": {
             "type": "string",
-            "enum": [
-              "pending",
-              "paid",
-              "shipped",
-              "cancelled"
-            ]
+            "enum": ["pending", "paid", "shipped", "cancelled"]
           },
           "items": {
             "type": "array",
@@ -2514,10 +2389,7 @@
           },
           "currency": {
             "type": "string",
-            "enum": [
-              "USD",
-              "EUR"
-            ],
+            "enum": ["USD", "EUR"],
             "example": "USD"
           },
           "createdAt": {
@@ -2548,10 +2420,7 @@
             "$ref": "#/components/schemas/PageMetaDto"
           }
         },
-        "required": [
-          "data",
-          "meta"
-        ]
+        "required": ["data", "meta"]
       },
       "OrderResponseDto": {
         "type": "object",
@@ -2560,9 +2429,7 @@
             "$ref": "#/components/schemas/SimpleOrderDto"
           }
         },
-        "required": [
-          "data"
-        ]
+        "required": ["data"]
       },
       "CreateOrderItemDto": {
         "type": "object",
@@ -2576,11 +2443,23 @@
             "example": 1,
             "minimum": 1,
             "maximum": 20
+          },
+          "expectedVersion": {
+            "type": "number",
+            "example": 1,
+            "minimum": 1
+          },
+          "expectedUnitPriceCents": {
+            "type": "number",
+            "example": 12990,
+            "minimum": 0
           }
         },
         "required": [
           "productId",
-          "quantity"
+          "quantity",
+          "expectedVersion",
+          "expectedUnitPriceCents"
         ]
       },
       "CreateOrderDto": {
@@ -2593,9 +2472,7 @@
             }
           }
         },
-        "required": [
-          "items"
-        ]
+        "required": ["items"]
       },
       "ScenarioDto": {
         "type": "object",
@@ -2609,10 +2486,7 @@
             "example": "Delays the response to exercise loading and cancellation states."
           }
         },
-        "required": [
-          "name",
-          "description"
-        ]
+        "required": ["name", "description"]
       },
       "ScenariosResponseDto": {
         "type": "object",
@@ -2624,9 +2498,7 @@
             }
           }
         },
-        "required": [
-          "data"
-        ]
+        "required": ["data"]
       },
       "TestingActionDataDto": {
         "type": "object",
@@ -2640,10 +2512,7 @@
             "example": "State reset to the default deterministic seed."
           }
         },
-        "required": [
-          "success",
-          "message"
-        ]
+        "required": ["success", "message"]
       },
       "TestingActionResponseDto": {
         "type": "object",
@@ -2652,25 +2521,18 @@
             "$ref": "#/components/schemas/TestingActionDataDto"
           }
         },
-        "required": [
-          "data"
-        ]
+        "required": ["data"]
       },
       "ChangeSimpleRoleDto": {
         "type": "object",
         "properties": {
           "role": {
             "type": "string",
-            "enum": [
-              "admin",
-              "customer"
-            ],
+            "enum": ["admin", "customer"],
             "example": "customer"
           }
         },
-        "required": [
-          "role"
-        ]
+        "required": ["role"]
       }
     }
   }

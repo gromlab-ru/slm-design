@@ -1,719 +1,646 @@
 ---
 name: slm-design
-description: "Используй при определении архитектурной роли изменения и работе по SLM Design: выборе владельца кода, слоя, модуля, scope, public API, направления зависимостей и пути продуктовых данных. Триггеры: SLM, Scoped Layered Module Design, где разместить или перенести код, business factory, DomainApi, DomainDeps, compositions/business, dependency adapter, inline adapter в builder, прямой вызов API из page/screen/hook, Zustand/SWR/SDK внутри business, domain error, deep import, module vs component, ui vs parts, page-level provider/store, business graph, Partial<Business>, event bus, subscription cleanup, lifecycle, factory-level и assembly tests, архитектура template/scaffold, перенос между apps/*/src и packages/*. НЕ используй для форматирования уже размещённого React/TypeScript/CSS-кода, реализации REST/OpenAPI-клиента, Next.js routing/rendering или механики генерации шаблона без архитектурного выбора. В смешанной задаче сначала зафиксируй SLM-границу, затем применяй профильный skill."
+description: "Используй при проектировании, реализации, миграции и архитектурном ревью по SLM: когда нужно определить SLM root, ответственность, владельца, слой, модульную границу, публичный API, форму домена Level 1 или Level 2, направление зависимостей, Domain API, business factory, adapter, assembly, framework binding, state/cache/error/lifecycle ownership или исправить deep import, цикл и environment leak. Не используй для локального coding, debugging, форматирования, framework- или SDK-механики, если архитектурная граница уже определена и не меняется."
 ---
-
-<!-- Generated from src-skills/slm-design/SKILL.md. Do not edit manually. -->
 
 # SLM Design
 
-## Процесс архитектурного решения
+## Рабочий контракт
 
-Не изменяй файлы, пока не принято архитектурное решение. Название папки, существующий похожий код и удобный импорт не доказывают правильность размещения.
+Применяй SLM как способ выполнить пользовательскую задачу, а не как тему для пересказа. После чтения этого файла ты должен уметь принять типовое архитектурное решение, реализовать его в запрошенном scope и проверить результат. Открывай references только для точной формулировки правила, редкого случая или неразрешённого вопроса.
 
-### Карточка решения
+Работай в таком порядке:
 
-Перед реализацией определи:
+1. Исследуй существующий код и локальные правила проекта.
+2. Определи ответственность, владельца и минимальный scope.
+3. Выбери слой, архитектурную сущность и форму домена.
+4. Спроектируй публичную границу, зависимости, runtime-сборку и lifecycle.
+5. До редактирования проверь решение по применимым правилам.
+6. Если пользователь запросил реализацию, внеси изменения до завершённого состояния.
+7. Проверь импорты, exports, граф, среды, lifecycle и тесты.
+8. Кратко сообщи решение, сделанные изменения, проверки, assumptions и остаточные риски.
 
-| Вопрос | Что зафиксировать |
+Не начинай широкое перемещение кода или генерацию каркаса до шагов 1-5. Не расширяй задачу до полного аудита SLM root, если локальное изменение можно корректно выполнить в меньшем scope.
+
+## Источники и обязательность
+
+Bundled DRAFT является рабочим источником истины для этой версии skill, но остаётся черновиком архитектуры. Используй источники в следующем порядке:
+
+1. [`rules/level-1.md`](./reference/draft/rules/level-1.md) и [`rules/level-2.md`](./reference/draft/rules/level-2.md) - единственный источник блокирующих правил.
+2. [`level-1/terminology.md`](./reference/draft/level-1/terminology.md) и [`level-2/terminology.md`](./reference/draft/level-2/terminology.md) - обязательный смысл терминов.
+3. README уровней - область применения, наследование и замены правил.
+4. Тематические главы - объяснения, рекомендации и варианты проектирования.
+5. Примеры - иллюстрации, а не обязательный каркас.
+6. `open-questions.md` - нерешённые вопросы, а не требования.
+
+Если тематическая глава строже реестра, не создавай из неё новое блокирующее правило. Предложи более строгую форму как рекомендацию или уточни локальную policy, если выбор влияет на API, ownership, стоимость или runtime. Если этот файл расходится с реестром или нормативной терминологией, следуй bundled DRAFT и отметь дефект skill.
+
+При review различай:
+
+- **Rule violation** - нарушено применимое правило с существующим кодом SLM.
+- **Definition mismatch** - реализация не соответствует нормативному смыслу сущности.
+- **Architectural risk** - есть доказуемый риск, но нет блокирующего правила.
+- **Decision required** - DRAFT или проект оставляет значимый выбор открытым.
+- **Recommendation** - улучшение, которое не является обязательным.
+- **Assumption** - обратимое рабочее допущение, явно указанное в результате.
+
+Не придумывай коды правил. Перед ссылкой на нарушение открой соответствующий реестр и проверь точную формулировку.
+
+## Минимальная рабочая модель
+
+### SLM root и уровни
+
+SLM root - граница структурной архитектуры одного приложения. Сначала найди фактический root, path aliases, локальный стайлгайд и конфигурацию архитектурной проверки. Не считай `src` root автоматически и не выводи сущность только из имени папки.
+
+Level 1 действует во всём SLM root и задаёт слои, модули, публичные API, общий dependency DAG и владение lifecycle.
+
+Level 2 применяется отдельно к выбранной предметной области и заменяет только её доменный модуль пакетной формой. Остальные домены могут постоянно оставаться на Level 1. Одна предметная область имеет ровно одну итоговую форму.
+
+### Слои
+
+| Исходный слой | Может зависеть от |
 |---|---|
-| Роль изменения | Framework wiring, продуктовый сценарий, интеграция, композиция интерфейса, технический сервис, UI или чистый фундамент |
-| Владелец | Домен, route/page scope, composition module, infra-модуль, UI-модуль или локальный consumer |
-| Данные | Продуктовые данные, техническое состояние, framework input, локальное UI-state или отсутствуют |
-| Runtime-возможности | Источники данных, hooks, stores, SDK, browser API, events, clock, random, env и другие внешние capabilities |
-| Место | Приложение или package, слой, модуль, вложенный модуль и сегмент |
-| Публичная граница | Что действительно нужно экспортировать и кто будет consumer |
-| Путь данных | От consumer до business API, dependency adapter и конкретного источника |
-| Lifecycle | Кто создаёт instance, сколько instances допустимо и кто выполняет cleanup |
-| Стратегия | Локальная правка, новый модуль, новый business-контракт, adapter, перенос или исправление public API |
-| Проверки | Typecheck, тесты, import graph, public API, lifecycle и архитектурные инварианты |
+| `app` | `app`, `compositions`, `domains`, `infra`, `ui`, `shared` |
+| `compositions` | `compositions`, `domains`, `infra`, `ui`, `shared` |
+| `domains` | `domains`, `infra`, `ui`, `shared` |
+| `infra` | `infra`, `shared` |
+| `ui` | `ui`, `shared` |
+| `shared` | `shared` |
 
-Карточку не обязательно выводить пользователю, если решение очевидно. Но агент обязан уметь обосновать каждый пункт до изменения файлов.
+Матрица не требует проходить через каждый промежуточный слой. Разрешённый импорт не переносит владение ответственностью.
 
-### Сбор контекста
-
-Перед выбором места:
-
-1. Прочитай локальные инструкции приложения или package.
-2. Найди фактическую границу SLM: `src/`, `apps/{app}/src` или другой локальный root.
-3. Проверь существующие слои, группы и соседние модули. Не создавай новую параллельную структуру без необходимости.
-4. Проверь aliases, package exports и реальную разрешимость импортов.
-5. Найди текущих consumers, public API и runtime import graph изменяемой ответственности.
-6. Проверь существующие templates или generators после архитектурного выбора. Шаблон не принимает решение за SLM.
-7. Отдельно найди product I/O, hooks, stores, subscriptions, browser API и другие runtime-возможности.
-8. Проверь, нет ли уже business-домена, которому принадлежит сценарий.
-
-Не считай неиспользуемый provider, пустой context, тип будущего graph или ссылку на несуществующий домен готовой архитектурой. Решение должно быть достижимо из runtime entry point и иметь реальных consumers.
-
-### Выбор роли
-
-Классифицируй ответственность в следующем порядке.
-
-#### Framework wiring
-
-Если код существует только из-за фреймворка, размести его в `app`:
-
-- route-файл;
-- bootstrap;
-- framework error entry;
-- подключение глобальных ресурсов;
-- тонкое подключение готового composition module.
-
-`app` не реализует продуктовую композицию, business graph, store, provider или экран.
-
-#### Продуктовый сценарий
-
-Если код определяет пользовательский сценарий, доменную модель, продуктовый state, бизнес-правило, нормализацию внешних данных, error mapping или доменный переход после ошибки, владелец находится в `business/{domain}`.
-
-Визуальная реакция на готовый domain error принадлежит consumer composition: сообщение, error screen, redirect, retry control и UI fallback выбираются по стабильному доменному `code`.
-
-Любой новый внешний источник продуктовых данных требует business-контракта. Колокация внешних вызовов в page/screen/widget services не является допустимым упрощением.
-
-#### Интеграция business-домена
-
-Если код реализует `{Domain}Deps` через SDK, HTTP, storage, browser API, state/query runtime, event bus или другой concrete runtime, размести его в `compositions/business/{domain}`.
-
-Это интеграционный composition module, а не business-домен и не обычная page/screen/widget composition.
-
-#### Продуктовая композиция
-
-Если код собирает route/page/layout/screen/widget, управляет UI-state, provider scope или lifecycle готового business graph, размести его в соответствующем composition module.
-
-Потребительский composition module получает продуктовые данные только через `{Domain}Api`. Он не импортирует product SDK, generated operations, product storage adapter или конкретный источник.
-
-#### Технический сервис
-
-Если код предоставляет техническую возможность без продуктовой модели и сценариев, размести его в `infra`:
-
-- HTTP client;
-- SDK wrapper;
-- logger;
-- theme engine;
-- i18n engine;
-- telemetry transport;
-- технический realtime client.
-
-Composition может использовать технический infra-сервис напрямую, если сервис не становится обходным путём к продуктовым данным. Если capability нужна business, она всё равно передаётся через business-owned `deps` и adapter.
-
-#### Универсальный UI
-
-Если сущность отображает интерфейс, не знает продуктовый сценарий и применима независимо от конкретной composition, размести её в `ui`.
-
-#### Чистый фундамент
-
-Если код детерминирован, не имеет runtime-state, не знает продукт и переиспользуется несколькими владельцами, рассмотри `shared`. По умолчанию оставляй код рядом с первым владельцем.
-
-### Выбор scope
-
-Выбирай минимальный scope, который полностью владеет ответственностью:
-
-1. Нужен одному component/module и не имеет самостоятельной ответственности: оставь внутри владельца.
-2. Нужен как самостоятельная часть одного module: создай nested module в `parts/`.
-3. Нужен нескольким частям одной page/route ветки: подними в общий composition scope этой ветки.
-4. Нужен нескольким composition modules и остаётся продуктовой композицией: создай отдельный composition module.
-5. Является доменным сценарием или product data boundary: создай или расширь `business/{domain}`.
-6. Является техническим сервисом: создай или расширь `infra/{service}`.
-7. Является универсальным UI: создай или расширь `ui/{module}`.
-8. Выноси в package только `ui`, `infra` или `shared` код с реальным вторым consumer либо явно зафиксированным межприложенческим ownership/reuse-контрактом.
-
-Не поднимай код выше ради короткого импорта. Не создавай `shared`, общий provider, generic business context или package «на будущее».
-
-### Component, module и group
-
-Применяй решение последовательно:
-
-1. Только отображает готовые props и не владеет зависимостями: component в `ui/` родительского module.
-2. Владеет сценарием, данными, state, dependency, lifecycle или внутренней декомпозицией: самостоятельный module.
-3. Самостоятельный module, локальный для владельца: nested module в `parts/`.
-4. Папка только классифицирует конечные modules: group без `index.ts`, state и runtime logic.
-5. `ui/`, `parts/`, `hooks/`, `types/`, `services/` и другие служебные папки внутри module: segments, а не modules.
-
-Если component начинает получать данные, выбирать источник, вызывать сценарный hook или управлять процессом, не добавляй логику в component. Измени архитектурную форму сущности.
-
-### Выбор стратегии
-
-#### Новый продуктовый сценарий
-
-1. Найди домен-владелец.
-2. Спроектируй `{Domain}Api`, доменные типы и доменные ошибки.
-3. Опиши минимальные runtime-capabilities в `{Domain}Deps`.
-4. Реализуй детерминированную доменную логику.
-5. Создай отдельные adapters в `compositions/business/{domain}`.
-6. Собери фабрику чистым builder.
-7. Подключи API во владельце lifecycle graph.
-8. Используй API из потребительских compositions.
-9. Добавь factory-level и assembly tests.
-
-#### Прямой product I/O вне business boundary
-
-Не расширяй существующее нарушение.
-
-1. Определи сценарий и домен.
-2. Перенеси контракт данных в business-owned `Deps`.
-3. Перенеси нормализацию, fallback и error mapping в business.
-4. Оставь concrete source call в dependency adapter.
-5. Замени прямой вызов на `{Domain}Api`.
-6. Закрой adapter и source details из public API.
-
-#### Новый store или dependency hook
-
-Сначала определи, является state локальным UI-state или доменным state.
-
-- State является локальным UI-state, если сбрасывается вместе с UI scope, управляет только представлением и не хранит продуктовый факт или product data cache. Такой state может принадлежать composition module и использовать выбранный state manager внутри владельца.
-- State является доменным, если выражает продуктовый факт, инвариант, доступен через business API или участвует в бизнес-сценарии.
-- Доменный state принадлежит business-контракту. Фабрика получает state adapter factory через `deps`, выбирает initial domain state и создаёт concrete port через adapter.
-- Source/query hook реализуется adapter-ом; business вызывает только dependency hook и возвращает собственный доменный hook/result.
-
-#### Сборка graph
-
-1. Собери каждый домен отдельным `compositions/business/{domain}` builder.
-2. Определи DAG cross-domain зависимостей.
-3. Выбери один явный lifecycle scope: application-lifetime composition, route, page, request или test. Слой `app` только подключает application composition.
-4. Создавай graph у владельца scope, а не в случайном screen/widget или на module scope без обоснования.
-5. Передавай consumers точный graph type. Не используй `Partial<Graph>` с приведением к полному типу.
-6. Для subscriptions, timers и resources зафиксируй cleanup/dispose.
-
-#### Архитектурное ревью
-
-Проверяй не только пути файлов, но и семантику:
-
-- business-shaped код вне `business`;
-- product graph в `infra`;
-- type-only imports, которые фактически переносят ownership;
-- provider, который не создаёт и не получает instance от явного владельца;
-- orphan modules и providers, недостижимые из entry point;
-- public API, раскрывающий raw store, context, adapter или generated types;
-- отсутствующие tests обязательного business-контракта.
-
-### Условия остановки
-
-Останови реализацию и сначала исправь решение, если:
-
-- владелец ответственности не определён;
-- один state или source имеет несколько конкурирующих владельцев;
-- business требует прямого runtime или type-only import concrete runtime;
-- graph создаёт runtime-цикл;
-- lifecycle instance или cleanup не определён;
-- public API нужен только для обхода границы;
-- шаблон генерирует архитектуру, противоречащую принятому решению;
-- изменение требует незапрошенной миграции нескольких независимых областей.
-
-### Локальные материалы
-
-Основной процесс достаточен для типового решения. Открывай только материал, который нужен текущей ветке задачи.
-
-| Ситуация | Материал |
+| Слой | Помещай сюда |
 |---|---|
-| Нужна полная карта допустимых файлов, root entries, segments и tests | [Атлас файлов SLM](./reference/canons/file-atlas.md) |
-| Задача затрагивает product I/O, source hook, domain store, event, lifecycle или external errors | [Runtime-граница business](#runtime-граница-business) |
-| Выполняется архитектурное ревью или финальная проверка реализации | [Архитектурная проверка](#архитектурная-проверка) |
-| Неясен layer, направление import или роль `app/compositions/business/infra/ui/shared` | [Слои](./reference/canons/layers.md) |
-| Нужно отличить module, component, group, nested module или спроектировать public API | [Модули](./reference/canons/modules.md) |
-| Проектируется factory, Api, Deps, domain error или сборка домена | [Business-фабрика](./reference/canons/business-factory.md) |
-| Неясно размещение hook/store/service/mapper/provider/type/style | [Сегменты](./reference/canons/segments.md) |
-| Решается вынос из `apps/*/src` в `packages/*` | [Монорепозитории](./reference/canons/monorepo.md) |
-| Нужен полный пример adapters, builder, state runtime и graph lifecycle | [Business composition](./reference/examples/business-composition.md) |
-| Нужна матрица factory-level, assembly и colocated tests | [Тестирование business-модулей](./reference/examples/business-testing.md) |
-| Нужен page/route provider, локальный UI store и доступ к готовому graph | [Композиция через Provider](./reference/examples/react/composition-provider.md) |
-| Команда выбирает организацию groups внутри `compositions` | [Структуры compositions](./reference/examples/react/composition-structures.md) |
+| `app` | Framework entry points: запуск, routes, преобразование внешнего input и подключение готовых API |
+| `compositions` | Pages, layouts, screens, widgets, route outcomes и multi-domain UI |
+| `domains` | Предметные модели, правила, сценарии и продуктовое состояние |
+| `infra` | Универсальные технические capabilities без собственной предметной модели |
+| `ui` | Универсальные UI-модули без зависимости от продуктовой композиции |
+| `shared` | Детерминированный product-agnostic фундамент без I/O, mutable state и lifecycle |
 
-Не используй карту как scaffold checklist. Наличие возможной папки не означает, что её нужно создать.
+### Архитектурные сущности
 
-## Runtime-граница business
-
-### Главный инвариант
-
-Business-модуль выполняет доменную композицию только над:
-
-- собственными типами и детерминированной логикой;
-- capabilities, переданными фабрике через `{Domain}Deps`.
-
-Business не вызывает runtime-возможность, если она не была передана фабрике. Это относится не только к данным и `infra`, но и к hooks, stores, subscriptions, browser API и другим concrete runtime-механизмам.
-
-Фабрика отвечает на вопрос «какой стабильный доменный API нужен приложению», а не «какими библиотеками и источниками он реализован».
-
-### Что разрешено внутри business
-
-Business может напрямую использовать:
-
-- собственные domain types;
-- собственные services, mappers, normalizers, validators и type guards;
-- собственные domain errors;
-- детерминированные вычисления без I/O, runtime-state и скрытого окружения;
-- чистые библиотеки вроде schema validators, decimal/date utilities, если результат определяется только явными аргументами и типы библиотеки не становятся public contract;
-- type-only контракты других business API для cross-domain dependencies.
-
-### Что передаётся через deps
-
-Через `{Domain}Deps` передавай любую runtime-capability:
-
-| Capability | Примеры concrete implementation |
+| Признак | Сущность |
 |---|---|
-| Product source | REST SDK, GraphQL client, CMS, storage |
-| Source/query hook | SWR, TanStack Query, Apollo hook |
-| Domain state runtime | Zustand, Redux, MobX, RxJS store |
-| Technical service | logger, telemetry, notifications, i18n engine |
-| Platform API | `window`, navigation, clipboard, geolocation |
-| Lifecycle event | unauthorized event, socket event, subscription |
-| Environment | env/config provider, feature runtime configuration |
-| Nondeterminism | clock, timer, random, ID generator |
-| Cross-domain behavior | ограниченный API другой business-фабрики |
+| Самостоятельная ответственность со своим API, dependencies, state или lifecycle | Module |
+| Только навигационно классифицирует modules и Groups, а в `domains` также domain packages | Group |
+| Организует внутренности одного module | Segment |
+| Framework UI entity, реализующая часть ответственности родителя | Component |
+| Самостоятельный module, скрытый внутри parent module | Nested module |
+| Framework bootstrap или route entry | Немодульная единица `app` |
+| Малый deterministic product-agnostic файл без внутренней границы | Shared resource |
 
-Не импортируй concrete implementation в business даже в том случае, если библиотека используется только в одном внутреннем файле.
+Module является узлом dependency graph, размещается в отдельной папке и имеет единый логический публичный API. Group, segment и component не владеют API, состоянием или lifecycle. Наличие локального `index.ts`, нескольких файлов, hook, data access или lifecycle-кода само по себе не превращает component или segment в module: всё это принадлежит ближайшему module-owner.
 
-### Запрещённые imports
+Nested module имеет собственную ответственность, API и узел графа, но внешний код получает его exports только через публичный API parent module.
 
-Production-код `business/**` не импортирует напрямую ни runtime values, ни types из concrete runtimes:
+Navigation Group непосредственно в `domains` может содержать доменные модули Level 1, доменные пакеты Level 2 и другие navigation Groups. Пакет при этом не становится модулем или Group.
 
-- `infra`, `compositions`, `app`;
-- SDK, generated operations и HTTP clients;
-- storage implementation;
-- React state/effect APIs;
-- SWR, TanStack Query, Apollo и другие query runtimes;
-- Zustand, Redux, MobX, RxJS stores;
-- browser и framework runtime APIs;
-- event bus implementation;
-- env и process-specific configuration.
+### Пакетная форма Level 2
 
-Запрет нельзя обойти через `import type`, alias, barrel, type cast или helper в `shared`. Type-only разрешены собственные contracts, детерминированный `shared`, чистые libraries и суженные public API других business-доменов.
-
-### Доменный шлюз данных
-
-Business API является единственной продуктовой границей для потребительского кода.
+Минимальная структура доменного пакета:
 
 ```text
-page / layout / screen / widget
-  → {Domain}Api
-  → business scenario
-  → {Domain}Deps
-  → private dependency adapter
-  → infra client / SDK / storage / external source
+domains/<domain>/
+├── metadata                 # optional, declarative only
+├── business/                # required SLM module
+├── assemblies/              # required non-empty Group
+├── adapters/                # when factories have technical dependencies
+└── react|vue|...            # when domain-specific bindings exist
 ```
 
-Внешний сервис остаётся физическим источником данных. Business является единственным источником доменной истины: он определяет модель, сценарий, нормализацию, fallback и ошибки.
+Доменный пакет является policy boundary, но не module, Group, public API или graph node. В его корне нет executable files, state, lifecycle, barrel или реэкспортов. Исполняемыми владельцами являются модули внутри пакета.
 
-Обычный consumer composition не создаёт параллельный продуктовый контракт поверх DTO или client. Единственная зона concrete product integration внутри `compositions` — `compositions/business/{domain}`.
+`business` является единственным предметным владельцем пакета. Его публичный API состоит из фасетов:
 
-### Business-owned deps
+| Путь | Содержимое |
+|---|---|
+| `business` | Только public types: Domain API, dependencies, factory types, error types |
+| `business/factory` | Только именованные runtime factories, по одной на Domain API |
+| `business/runtime` | Только реально нужные внешним consumers детерминированные runtime values/functions |
 
-`{Domain}Deps` принадлежит business-модулю и описывает необходимые возможности доменным языком.
+Другой публичный путь внутрь `business` является deep import. `business/runtime` не создавай для симметрии.
 
-Требования:
+Роли Level 2:
 
-- группируй методы по capability, а не по имени SDK/client;
-- принимай доменные аргументы;
-- принимай внешние результаты как `unknown`, если нужна runtime-проверка;
-- описывай собственную минимальную форму dependency hook/result;
-- описывай собственный state port, а не `StoreApi` конкретной библиотеки;
-- возвращай cleanup из subscription capability;
-- не передавай mapper, normalizer или domain error через deps;
-- не используй generated DTO как доменную модель;
-- не передавай целый client, если домену нужны два конкретных действия.
+- `business` определяет Domain API, модели, validation, transitions, scenario results, dependency contracts и expected domain errors.
+- Adapter module реализует связанные technical dependencies поверх SDK, storage, platform API, state/query runtime или другого technical runtime.
+- Assembly module выбирает adapters, вызывает factories и возвращает именованный graph готовых API для одного execution context.
+- Framework binding module получает готовые Domain API и владеет одной domain-specific интеграцией с framework.
+- Composition, `app`, request handler или test setup собирает междоменный graph в ацикличном порядке и владеет его общим scope.
 
-Плохо:
+## Универсальный цикл решения
+
+### 1. Discover
+
+Перед решением найди только релевантный контекст:
+
+- локальные инструкции и стайлгайд;
+- SLM root и mapping путей на слои и модули;
+- существующие public entry points и package exports;
+- внешних consumers затрагиваемой границы;
+- runtime- и type-only imports, реэкспорты и aliases;
+- state, I/O, SDK, framework runtime и источники недетерминизма;
+- места создания graph и instances;
+- subscriptions, timers, requests, connections и cleanup;
+- тесты и команды проверки затрагиваемых owners.
+- architecture mapping, metadata, environment declarations и business-safe allowlists, если проект их использует.
+
+Считай type-only import и reexport архитектурным ребром. Для runtime-графа дополнительно ищи arguments factories, callbacks, registries, event buses, service locators и singletons: фактическая зависимость может не иметь прямого runtime import.
+
+### 2. Classify
+
+Сформулируй краткую внутреннюю карточку:
+
+```text
+Task outcome:
+Responsibility:
+Owner:
+Layer:
+Entity:
+Domain form:
+Public consumers:
+Runtime dependencies:
+Environment:
+State and lifecycle:
+Change scope:
+```
+
+Не обязан показывать карточку пользователю, если решение однозначно. Если одно из ключевых полей неизвестно и влияет на границу, сначала исследуй код, затем задай один конкретный вопрос.
+
+### 3. Design boundary
+
+Определи:
+
+- один owner каждой самостоятельной ответственности;
+- минимальный публичный контракт для реальных consumers;
+- разрешённые static edges;
+- runtime injection и место сборки graph;
+- владельцев domain state, technical cache и framework projection;
+- безопасную форму expected errors;
+- environment entry points и их transitive reachability;
+- scope, multiplicity и cleanup каждого lifecycle resource;
+- тестовую границу каждого изменяемого owner.
+
+### 4. Validate before edits
+
+До изменения файлов ответь:
+
+- Соответствует ли ответственность роли слоя?
+- Является ли выбранная сущность настоящим owner, а не удобной папкой?
+- Есть ли у domain одна форма?
+- Импортируется ли каждый чужой module через public API?
+- Разрешены ли layer и cross-domain edges?
+- Остаётся ли graph ацикличным?
+- Совместим ли transitive graph с environment entry point?
+- Есть ли owner, scope, multiplicity и cleanup у ресурсов?
+- Не расширяет ли решение scope на dependency-connected owners, и согласовано ли это расширение?
+
+### 5. Act and verify
+
+Если пользователь просит код, не останавливайся на рекомендации. Реализуй согласованную границу, обнови consumers и tests, удали obsolete paths и проверь завершённое состояние. Если пользователь просит только анализ, план или review, не редактируй код.
+
+## Алгоритмы выбора
+
+### Ответственность и владелец
+
+1. Опиши ответственность одним предложением без имени папки, файла или библиотеки.
+2. Назови одну причину её изменения.
+3. Найди данные, behavior и state, которые изменяются вместе с ней.
+4. Найди внешних consumers.
+5. Проверь, нужны ли ей собственные API, dependencies, state или lifecycle.
+6. Если самостоятельность доказана, назначь ровно один module-owner.
+7. Если ответственность нельзя сформулировать или у неё конкурирующие owners, остановись до структурных изменений.
+
+Место выполнения не переносит владение. Provider, hook, controller, route и component могут запускать чужую ответственность, не становясь её owner.
+
+### Выбор слоя
+
+```text
+Только framework bootstrap, route entry или external input adaptation?
+  -> app
+
+Page/layout/screen/widget, route outcome или multi-domain UI?
+  -> compositions
+
+Domain model, scenario, validation, transition или product state?
+  -> domains
+
+Production implementation technical dependency конкретного Level 2 domain?
+  -> adapter module внутри package этого domain
+
+Самостоятельный универсальный technical service без domain model?
+  -> infra
+
+Product-independent reusable UI?
+  -> ui
+
+Deterministic, product-agnostic, без I/O/state/lifecycle?
+  -> shared
+
+Иначе -> уточни ответственность, не выбирай папку по аналогии.
+```
+
+Domain-specific framework integration над готовым API может принадлежать Framework Group пакета Level 2. Зависимость от React/Vue сама по себе не переносит domain behavior в `compositions` или `app`.
+
+### Выбор сущности
+
+```text
+Есть самостоятельный owner/API/dependencies/state/lifecycle?
+  Да -> module.
+  Нет -> часть текущего owner.
+
+Самостоятельный module должен оставаться внутренней границей parent,
+а внешний код получать его exports только через parent API?
+  Да -> nested module.
+
+Папка в `domains` только классифицирует domain modules,
+domain packages и navigation Groups?
+  Да -> navigation Group слоя `domains`.
+
+Другая папка только классифицирует modules/Groups?
+  Да -> Group.
+
+Папка только организует содержимое одного module?
+  Да -> segment.
+
+Framework UI entity не имеет самостоятельной ответственности?
+  Да -> component parent module.
+```
+
+Не создавай module только из-за размера, повторного использования внутреннего helper или желания получить отдельную папку. Не оставляй самостоятельную ответственность component-ом или segment-ом только ради меньшего diff.
+
+### Выбор формы домена
+
+По умолчанию используй доменный модуль Level 1. Level 1 не требует factory, ports, adapters, assemblies или разделения по техническим ролям.
+
+Рассматривай Level 2, когда конкретному домену действительно нужны:
+
+- несколько независимо собираемых Domain API;
+- разные browser/server/request assemblies;
+- несколько production technical integrations;
+- строгие environment boundaries;
+- самостоятельные domain-specific framework modules.
+
+Не выбирай Level 2 из-за количества файлов, одного SDK, одного hook, желания унифицировать дерево или гипотетической будущей интеграции. Зафиксируй, какую реальную потребность окупает дополнительная стоимость package, facets, assembly и adapters.
+
+### Публичная граница
+
+1. Перечисли реальных внешних consumers.
+2. Для каждого запиши минимально необходимый contract.
+3. Удали exports, которым нет consumer.
+4. Не включай mutable internals, concrete clients, stores, contexts, adapter implementations или lifecycle internals в API домена, `business` или parent module.
+5. Для обычного module оставь одну логическую external entry point.
+6. Для `business` используй только объявленные facets.
+7. Удали deep imports и обнови package exports/aliases при необходимости.
+8. Не открывай nested module напрямую за пределы parent boundary.
+
+Каждый adapter остаётся обычным SLM-модулем и предоставляет собственный минимальный public API, через который assembly получает production implementation. Запрещён не public API adapter-модуля, а его реэкспорт через `business`, корень пакета, Domain API или другой несвязанный owner.
+
+Для Level 2 разделяй Domain API по устойчивым различиям consumers, dependencies или environments, а не по внутренним техническим папкам. Каждый публичный scenario принадлежит ровно одному Domain API; каждому API соответствует одна factory. Именованный graph assembly не является новым Domain API.
+
+### Проверка зависимости
+
+Для каждого нового или изменённого edge:
+
+1. Определи source owner и target owner.
+2. Определи их слои и формы доменов.
+3. Если owners различаются, импортируй target только через public API.
+4. Проверь матрицу слоёв.
+5. Если edge пересекает Level 2 package boundary, примени более строгую cross-domain модель.
+6. Проверь transitive environment compatibility.
+7. Добавь edge в общий module DAG и проверь цикл.
+
+Между двумя доменными модулями Level 1 допустим обычный runtime-import публичного API при соблюдении layer matrix и DAG. Не навязывай им runtime injection Level 2.
+
+Если хотя бы одна сторона является пакетом Level 2, статически допустимы три формы:
 
 ```ts
-import type { StoreApi } from 'zustand'
-import type { AdminApiClient } from '@vendor/admin-sdk'
-
-export type AuthDeps = {
-  api: AdminApiClient
-  store: StoreApi<AuthState>
-}
+import type { LevelOneDomainApi } from '.../level-one-domain'
+import type { LevelTwoDomainApi } from '.../level-two-domain/business'
+import { deterministicValue } from '.../level-two-domain/business/runtime'
 ```
 
-Хорошо:
+Готовый runtime API, связь с которым пересекает Level 2 package boundary, создаёт внешний graph owner и передаёт assembly или factory аргументом. Через такую границу не импортируй чужую factory, assembly, adapter, API singleton, framework state, hook, context, Provider, component или внутренний путь `business`.
 
-```ts
-import type { AuthState } from './auth-state.type'
-import type { VerifyPhoneCodeData } from './verify-phone-code-data.type'
+Не скрывай cross-domain dependency локальным structural interface, callback, global registry или event bus. Установи владельца контракта и отрази фактический runtime edge в graph, иначе можно пропустить цикл.
 
-export type SourceHookResult = {
-  data: unknown
-  error: unknown
-  isLoading: boolean
-  refresh: () => Promise<void>
-}
+### Runtime capabilities
 
-export type AuthDeps = {
-  phoneAuth: {
-    requestCode: (phone: string) => Promise<unknown>
-    resendCode: (challengeId: string) => Promise<unknown>
-    verifyCode: (data: VerifyPhoneCodeData) => Promise<unknown>
-  }
-  session: {
-    setToken: (token?: string | null) => void
-    useToken: () => string | null | undefined
-  }
-  sessionEvents: {
-    onInvalidated: (listener: () => void) => () => void
-  }
-  state: {
-    create: (initialState: AuthState) => {
-      get: () => AuthState
-      set: (state: AuthState) => void
-      useState: () => AuthState
-    }
-  }
-}
-```
+| Capability | Размещение в Level 2 |
+|---|---|
+| SDK, HTTP/GraphQL source, storage, platform API | Adapter |
+| Concrete state/query runtime для business dependency | Adapter |
+| Clock, timer, random, ID, environment | Явная factory dependency с production implementation в adapter |
+| Готовый API другого домена | Cross-domain dependency, передаваемая graph owner |
+| Provider, hook или query projection готового Domain API | Framework binding module |
+| Page-local или multi-domain UI state | Владеющий composition module |
+| Универсальный technical service | `infra` module |
 
-### Dependency adapters
+Adapter переводит technical arguments/results и реализует dependency contract. Он не объявляет Domain API scenario, domain fallback, transition или public domain error. Production implementation technical dependency не прячь inline в assembly или composition.
 
-Adapter находится снаружи business и реализует конкретную часть `{Domain}Deps`.
+Assembly выбирает public adapters своего домена, вызывает factories и возвращает точный именованный graph API. Она не добавляет scenarios, методы API или собственные domain errors. Framework binding получает готовые API и не вызывает factory/assembly и не выбирает adapter.
+
+Даже если готовый `infra` API структурно совпадает с technical dependency, текущие правила Level 2 требуют production implementation в adapter-модуле домена. Сделай его public API минимальным и не добавляй фиктивные преобразования, но не обходи обязательную adapter boundary прямой передачей `infra` capability в factory.
+
+Перед новым external import в `business`:
+
+1. Определи реально resolved package entry и resolver conditions нужных environments.
+2. Проверь transitive runtime graph, side effects, I/O, mutable state и runtime capabilities.
+3. Убедись, что package соответствует business-safe критериям, и обнови project allowlist/declaration.
+4. Если доказательства нет, вынеси capability в factory dependency и реализуй production binding через adapter.
+
+### State и cache
 
 ```text
-compositions/business/auth/
-├── create-auth-business.ts
-├── adapters/
-│   ├── admin-auth-session.adapter.ts
-│   ├── browser-auth-navigation.adapter.ts
-│   ├── zustand-auth-state.adapter.ts
-│   └── admin-auth-session-events.adapter.ts
-└── index.ts
+Domain facts, validation, transitions, commands, scenario outcomes
+  -> business authority
+
+Transport/source cache
+  -> adapter
+
+Framework/query projection готового Domain API
+  -> framework binding
+
+State только текущей UI composition
+  -> composition owner
 ```
 
-Правила adapter:
+Raw DTO, query-library result и mutable client не являются Domain API. Private source cache внутри adapter может хранить raw transport data, если DTO и library types не выходят в Domain API. Framework projection и любые публикуемые domain values используют только форму, произведённую или проверенную `business`, и не создают параллельную предметную модель.
 
-- импортирует type-only business contract;
-- импортирует concrete infra/runtime implementation;
-- преобразует доменные аргументы в transport arguments;
-- возвращает raw/unknown runtime result, если business должен его проверить;
-- пробрасывает source error без создания domain error;
-- не реализует бизнес-правило;
-- не выбирает доменный fallback;
-- не экспортируется через public API integration module;
-- тестируется на wiring, payload и соответствие dependency contract.
+При optimistic или concurrent mutations не придумывай универсальный rollback. Сначала установи owner политики ordering, versioning, rebase/rollback и authoritative refresh.
 
-Каждая runtime-capability получает явный adapter. Не скрывай несколько разных integrations как inline-функции внутри builder.
+### Errors
 
-### Dependency hooks
+- Каждый expected failure публичного scenario, включая собственный domain rejection, представлен именованным readonly error type текущего домена со stable code.
+- Expected technical или foreign-domain failure, доступный через текущий Domain API, преобразуется текущим `business` в такой собственный domain error.
+- Source object, SDK class, message, status, payload и `cause` не входят в public domain contract.
+- Type errors экспортируются через `business`; необходимые runtime codes и guards - только через реально нужный `business/runtime`.
+- Не выбирай exception или discriminated `Result` как правило SLM: сохрани project policy и архитектурное владение.
+- Не маскируй programming defect под expected domain outcome. Если меняется публичный failure channel, выясни политику unexpected failures, cancellation и serialization.
 
-Если business должен предоставить hook, concrete hook передаётся через deps.
+### Lifecycle и environment
+
+Для каждого request, subscription, listener, timer, observer, connection или другого долгоживущего ресурса зафиксируй:
 
 ```text
-SWR/TanStack hook
-  → dependency adapter
-  → business-owned source hook contract
-  → business wrapper hook
-  → domain result / domain error
+Owner:
+Created or started by:
+Scope:
+Multiplicity:
+Environment:
+Owned or borrowed:
+Cleanup:
 ```
 
-Business wrapper может:
+Factory или assembly не должна запускать неучтённую долгоживущую работу. Явная операция, запускающая ресурс, предоставляет cleanup. Если assembly обязана создать resource для graph, её публичный result предоставляет cleanup handle; graph owner вызывает его не позже конца scope. Assembly без собственного ресурса не возвращает пустой `dispose` для симметрии.
 
-- вызвать переданный dependency hook;
-- нормализовать `data` в доменную модель;
-- заменить source error доменной ошибкой;
-- вычислить domain state и selectors;
-- вернуть собственный стабильный result type.
+Спроектируй и failure path любой сборки graph. Если assembly, composition, `app`, request handler или test setup уже создали owned resources и следующий шаг завершился ошибкой до возврата готового graph, текущий graph owner очищает созданное в обратном dependency order. Если rollback, async cleanup или repeated disposal имеют значимую семантику, не придумывай её молча: зафиксируй решение и покрой partial-acquisition test.
 
-Dependency hook обязан быть non-throwing и non-Suspense: technical failure возвращается в `error: unknown`, а не выбрасывается во время вызова hook. Business wrapper обязан заменить этот `error` собственной domain error. Публичные callbacks dependency result, например `refresh`, также оборачиваются business и не могут выдать source error наружу.
+Environment определяется transitive import graph, а не именем файла или tree shaking. Для RSC, server actions, workers, edge runtime и conditional exports сначала установи реальные executable edges, framework reference edges и runtime capabilities; не объявляй environment safety только по метке `client`/`server`.
 
-Business wrapper не импортирует query library. В public contract не протекают `SWRConfiguration`, `UseQueryResult`, query keys, cache implementation или library-specific mutate API без отдельного domain contract.
+## Рабочие процедуры
 
-### Domain state
+### Проектирование
 
-Business владеет:
+1. Ограничь scope пользовательской задачей.
+2. Найди SLM root, project mapping и существующие owners.
+3. Построй карту consumers и текущих public paths.
+4. Определи ответственность, layer, entity и domain form.
+5. Спроектируй target boundaries и минимальные public contracts.
+6. Классифицируй technical и cross-domain dependencies.
+7. Определи graph owner, environments, state, errors и lifecycle.
+8. Проверь правила и stop conditions.
+9. Выдай решение, target structure, dependencies и порядок реализации.
 
-- моделью доменного state;
-- допустимыми переходами;
-- commands и selectors;
-- реакцией на dependency results и events.
+Не предлагай файловое дерево до определения owners и boundaries. Имена файлов и segments следуют локальному стайлгайду, а не задаются SLM.
 
-Business не владеет concrete state manager. Business выбирает initial domain state и передаёт его в `deps.state.create(initialState)`; adapter только создаёт concrete store с переданным значением.
+### Реализация
 
-Zustand/Redux/MobX adapter реализует business-owned state adapter factory и создаётся в `compositions/business/{domain}`. Business-фабрика получает adapter factory через `deps`, передаёт initial domain state и получает concrete port.
+1. Зафиксируй принятое решение и change scope.
+2. Изменяй код в dependency order: contracts и behavior раньше adapters и assembly, providers/consumers после готовых API.
+3. Для Level 1 не создавай отсутствующие роли Level 2.
+4. Для Level 2 сначала реализуй types, errors, behavior и factories `business`.
+5. Затем реализуй production adapters, assemblies и framework bindings, которые реально нужны задаче.
+6. Собери междоменный graph в composition, `app`, request handler или test setup.
+7. Переведи всех затронутых consumers на public paths.
+8. Обнови architecture mapping, metadata, package exports, environment declarations и business-safe allowlists, затронутые новой границей.
+9. Удали obsolete exports, deep imports и старые boundaries в согласованном scope.
+10. Добавь tests рядом с owners, включая cleanup failure paths для assemblies и одноразовых graph roots, создающих resources.
+11. Запусти доступные structural, type, unit, integration и architecture checks и убедись, что новые пути входят в анализ.
 
-Локальный UI-state является другим случаем. Состояние раскрытия sidebar, выбранной вкладки или шага локального UI-flow может использовать concrete state manager непосредственно внутри владеющего composition module, если оно не подменяет доменное состояние и product data boundary.
+Не оставляй заведомо промежуточную смешанную границу как завершённый результат. Backward compatibility добавляй только для реального внешнего consumer, persisted contract или явно согласованной phased migration.
 
-### Доменные ошибки
+### Миграция Level 1 -> Level 2
 
-Из любого публичного метода, command, query или hook business-модуля выходят только собственные доменные ошибки.
+1. Выбери ровно один domain module и докажи потребность Level 2.
+2. Найди все consumers, exports, state, I/O, framework integration и lifecycle resources.
+3. Вычисли dependency-connected migration radius до редактирования.
+4. Спроектируй Domain API по scenarios и consumers, а не по текущим technical segments.
+5. Перенеси модели, validation, transitions, outcomes и errors под authority `business`.
+6. Объяви явные factory dependencies и по одной factory на API.
+7. Оформи production technical implementations как adapter modules.
+8. Создай минимум одну assembly для реального execution context.
+9. Перенеси domain-specific framework responsibilities в Framework Group.
+10. Оставь pages, routes и multi-domain UI в `compositions`.
+11. Переключи external consumers и graph roots.
+12. Обнови declarations формы домена, модулей, facets, environments и public entry points в project architecture mapping.
+13. Удали прежний root API и старую форму домена.
+14. Проверь, что каждый завершённый этап оставляет одну форму затронутой domain responsibility.
 
-Business обязан преобразовать:
+Временное физическое сосуществование старой и новой структуры допустимо только внутри незавершённого изменения. Не объявляй его conforming state. Не мигрируй несвязанные соседние домены, но включи в migration radius dependency-connected consumer, если его API нужно рефакторить или перевести на Level 2 для явной runtime injection. Такое расширение scope сначала согласуй. Если атомарный cutover невозможен, согласуй ограниченную compatibility strategy и срок её удаления.
 
-- rejected promise dependency;
-- synchronous throw dependency;
-- source hook error;
-- ошибку store/storage/browser API;
-- невалидный успешный ответ;
-- неизвестную runtime-ошибку.
+### Архитектурное ревью
 
-Domain error содержит стабильный `code`. Исходная ошибка может сохраняться только в `cause` для диагностики.
+1. Определи review scope, SLM root и формы затронутых доменов.
+2. Построй фактическую карту owners, public boundaries, imports и runtime injection.
+3. Проверь structural правила класса `A` по наблюдаемым evidence.
+4. Отдельно проверь смысловые правила класса `R`; отсутствие lint error не доказывает их соблюдение.
+5. Проверь transitive `business` closure, resolved external package entries и business-safe declarations.
+6. Проверь environment graph и полноту architecture mapping: неизвестные executable paths не должны выпадать из анализа.
+7. Проверь state/cache/error/lifecycle ownership, включая cleanup частично созданной assembly.
+8. Проверь, что tests находятся у правильных owners и не дублируют весь behavior на каждом уровне.
+9. Сначала сообщи findings по severity, затем краткий verdict и остаточные gaps.
 
-Потребитель не ориентируется на:
-
-- `message` внешней ошибки;
-- HTTP status;
-- `response`;
-- SDK error class;
-- stack или transport code.
-
-Adapter не импортирует и не создаёт domain error. Error mapping всегда выполняет business.
-
-Rejected promise, synchronous throw, source error и malformed response всегда превращаются в domain error. Fallback допустим только для валидного доменного исхода, явно представленного dependency contract, например корректного отсутствия данных. Fallback не используется для поглощения technical failure или contract drift.
-
-### Чистый builder
-
-`compositions/business/{domain}/create-{domain}-business.ts` только:
-
-1. явно создаёт или получает runtime instances нужного lifecycle без I/O;
-2. создаёт adapters поверх этих instances;
-3. передаёт adapters и API других доменов в factory;
-4. возвращает готовый `{Domain}Api`.
-
-Builder не содержит:
-
-- inline SDK calls;
-- `window`/storage operations;
-- domain mapping;
-- domain errors;
-- Zustand/SWR setup вперемешку с другими dependencies;
-- product request при создании API;
-- скрытую subscription без cleanup contract.
-
-Если capability имеет lifecycle, business API предоставляет domain-level `start`/`subscribe` operation, которая использует dependency и возвращает cleanup wrapper. Business преобразует ошибки регистрации, callback и cleanup в собственные domain errors. Builder остаётся без side effects, а владелец scope запускает operation после mount/commit и вызывает cleanup при завершении lifecycle.
-
-Browser/application builder без cross-domain dependencies вызывается без аргументов. Для request scope integration module определяет отдельный `requestScopeInput` только с framework/request data, например headers, cookies, request ID и abort signal. Concrete client factory импортируется и вызывается внутри integration module. Request input используется только для создания adapters, не передаётся в business как raw client и не экспортируется consumer compositions.
-
-### Graph и lifecycle
-
-Per-domain builder не является владельцем полного graph.
-
-Владелец graph:
-
-- выбирает application-lifetime composition/route/page/request/test scope;
-- собирает домены в ацикличном порядке;
-- создаёт ровно необходимый набор API;
-- использует точный graph type;
-- управляет cleanup subscriptions/resources;
-- не повторяет adapter wiring;
-- не импортирует raw infra для «досборки» домена.
-
-Не используй generic `Partial<Business>` с последующим `as Business`. Если scope содержит только Auth, его contract должен обещать только Auth.
-
-### Cross-domain dependencies
-
-Один business-домен не импортирует runtime другого домена. Он объявляет нужную capability в своих `Deps` через type-only API другого домена, по возможности суженный `Pick`.
-
-Готовый API передаётся builder-у при сборке graph:
+Каждый finding содержит:
 
 ```text
-createAuthBusiness()
-  → createUserBusiness({ authApi })
-  → createOrdersBusiness({ userApi })
+Location:
+Kind:
+Rule or definition:
+Evidence:
+Impact:
+Minimal remediation:
+Required tests:
+Confidence:
 ```
 
-Runtime-цикл означает ошибочную границу доменов. Не скрывай цикл service locator, lazy import или глобальным event bus.
+Не называй рекомендацию нарушением. Не подтверждай полное SLM conformance, если не исследовал весь нужный graph или не знаешь project mapping.
 
-Подробный контракт фабрики находится в [Business-фабрике](./reference/canons/business-factory.md). Практическая сборка показана в [Business composition](./reference/examples/business-composition.md).
+### Тестирование по владельцам
 
-## Архитектурная проверка
+| Ответственность | Основная test boundary |
+|---|---|
+| Domain scenarios, validation, state и expected errors | `business` через соответствующую factory |
+| Deterministic runtime/guards | `business` |
+| Technical mapping и provider behavior | Adapter module |
+| Graph composition, adapter selection, environment, success cleanup и partial-failure cleanup | Assembly module или одноразовый graph owner |
+| Provider, hook, form или query projection | Framework binding module |
+| Multi-domain graph и lifecycle | Composition, `app` или другой graph owner |
 
-Не считай задачу завершённой только потому, что код компилируется или UI отображается. Проверь архитектурное решение, runtime-цепочку и обязательные тестовые границы.
+Не повторяй полный business scenario suite в adapter, assembly и framework tests. Проверяй в каждой границе только принадлежащий ей behavior и integration contract.
 
-### Проверка владельца
+## Anti-patterns
 
-- У каждой ответственности один явный владелец.
-- Product state и сценарии принадлежат business-домену.
-- Page/route UI-state принадлежит соответствующему composition module.
-- Concrete technical service принадлежит infra-модулю.
-- Concrete business dependency adapter принадлежит `compositions/business/{domain}`.
-- Provider находится у владельца scope, а не в generic infra-модуле.
-- Код не поднят в общий слой или package без реального consumer.
+### Ownership и структура
 
-### Проверка runtime-цепочки
+- Выбирать слой или сущность по имени существующей папки.
+- Размещать domain model или scenario в `infra`/`shared`.
+- Оставлять page, route policy или multi-domain responsibility внутри домена.
+- Делать Group, segment или component скрытым owner.
+- Создавать общий module или Level 2 package на будущее.
+- Требовать от component быть stateless: локальные data/lifecycle details допустимы, пока ответственность принадлежит parent module.
 
-Для каждого `{Domain}Api` проследи цепочку сборки:
+### Public boundaries
 
-```text
-graph owner
-  → per-domain builder
-  → dependency adapters + business factory
-  → {Domain}Api
-  → provider/entry
-```
+- Deep imports во внутренности module или `business`.
+- Root barrel доменного пакета или Group.
+- Reexport adapter implementation через `business`, package root или Domain API вместо public API самого adapter-модуля.
+- Reexport client и server entry points через общий barrel.
+- Создавать `business/runtime` без внешнего consumer.
 
-И отдельно цепочку вызова:
+### Business и runtime
 
-```text
-consumer
-  → {Domain}Api
-  → business scenario
-  → {Domain}Deps
-  → dependency adapter
-  → source/runtime
-```
+- Импортировать SDK, storage, framework, state/query manager, platform API или hidden nondeterminism в `business`.
+- Обходить boundary через helper, `shared` или type alias.
+- Публиковать raw DTO или library-specific cache/store types в Domain API.
+- Позволять adapter определять domain fallback, transition или error semantics.
+- Прятать production adapter inline в assembly/composition.
+- Позволять factory выбирать environment или assembly.
 
-Если отсутствует хотя бы одно необходимое звено, домен не подключён. Тип будущего API, пустой provider или неиспользуемый builder не заменяет runtime-сборку.
+### Assembly, framework и cross-domain
 
-Для каждого route/page entry проверь, что он достигает готового composition module. `app` не должен реализовывать screen/layout/product wiring самостоятельно.
+- Добавлять scenario или API method в assembly.
+- Вызывать factory/assembly из framework binding.
+- При пересечении Level 2 package boundary импортировать framework state, hooks или components другого домена.
+- При пересечении Level 2 package boundary импортировать чужую factory, assembly, adapter или API singleton.
+- Прятать runtime dependency в service locator, mutable registry или event bus.
+- Передавать production `infra` capability напрямую в Level 2 factory в обход обязательного adapter-модуля.
 
-### Проверка business imports
+### State и lifecycle
 
-В production-коде `business/**` не должно быть прямых runtime или type-only imports из concrete runtimes:
+- Делать cache параллельной domain model.
+- Строить optimistic domain value из raw form/DTO без business validation.
+- Использовать file-level singleton без доказанного application scope.
+- Запускать скрытую subscription/timer при создании API.
+- Оставлять resource без scope или cleanup.
+- Возвращать пустой `dispose` только для одинаковой формы assemblies.
 
-- `infra`, `compositions`, `app`;
-- SDK/generated clients;
-- SWR/TanStack Query/Apollo;
-- Zustand/Redux/MobX/RxJS store runtime;
-- React state/effect runtime;
-- storage/browser API;
-- env/event bus/clock/random implementations.
+### Процесс
 
-Разрешены собственные файлы, type-only business contracts, `shared` без runtime-capabilities и чистые детерминированные библиотеки.
+- Выбирать Level 2 по размеру каталога.
+- Генерировать полный package scaffold без потребности.
+- Мигрировать несвязанные соседние домены ради локального изменения.
+- Копировать пример как нормативное дерево.
+- Перечислять коды правил вместо анализа фактического graph и runtime.
+- Задавать пользователю все открытые вопросы независимо от задачи.
 
-Проверь не только import paths, но и re-export/barrel/helper, который может скрывать запрещённую зависимость.
+## Stop conditions и адресные вопросы
 
-### Проверка deps
+Остановись до изменения публичной или runtime-границы, если:
 
-- Каждая runtime-capability присутствует в `{Domain}Deps`.
-- Контракт принадлежит business и назван доменным языком.
-- В `Deps` нет client/SDK/generated operation/StoreApi/query-library types.
-- Dependency hook возвращает business-owned source result.
-- State dependency использует business-owned state port.
-- External result имеет `unknown`, если требует runtime validation.
-- Subscription возвращает cleanup.
-- Cross-domain API сужен до реально используемых методов.
+- ответственность или owner не определены;
+- одна ответственность имеет конкурирующих owners;
+- неизвестны consumers изменяемого API;
+- одна domain responsibility окажется в двух формах;
+- planned edge создаёт цикл;
+- environment compatibility нельзя установить;
+- resource scope, multiplicity или cleanup неизвестны;
+- изменение требует незапрошенной широкой миграции;
+- локальные инструкции противоречат выбранной SLM boundary;
+- корректность зависит от открытой semantics cancellation, concurrency, hydration или disposal;
+- задача требует правил монорепозитория, versioning или нескольких SLM roots, которых текущий DRAFT не задаёт.
 
-### Проверка adapters
+Задавай вопрос только при наличии trigger:
 
-- Для каждой runtime-capability есть явный adapter.
-- Adapter находится в `compositions/business/{domain}`.
-- Builder не содержит inline integration logic.
-- Adapter не формирует domain error.
-- Adapter не выполняет domain normalization.
-- Adapter не выбирает business fallback.
-- Private adapters отсутствуют в public `index.ts`.
-- Concrete transport imports не протекают в обычные consumer compositions.
+| Trigger | Что выяснить |
+|---|---|
+| L1 -> L2 или удаление старого API | Полный migration radius, атомарный cutover или compatibility strategy |
+| Новая technical dependency | Ownership contract, timeout/retry/idempotency/order/subscription semantics |
+| Abort или cancellable operation | Кто владеет cancellation и как она связана с cleanup/outcome |
+| Публичные errors, RPC, server action | Expected failure, cancellation, unexpected defect и serialization policy |
+| Store, persistence или external events | Initial state, transitions, reset, persistence и owner |
+| Optimistic/concurrent mutations | Ordering, versioning, rollback/rebase и authoritative refresh |
+| Assembly, lazy graph или новый root | Scope, multiplicity, owned/borrowed resources и disposal |
+| SSR, hydration, RSC | Serialization boundary, validation/reset и executable/reference edges |
+| Worker, edge, conditional exports | Реальные capabilities и resolver conditions |
+| Готовый `infra` API совпадает с port | Какой минимальный public API adapter-модуля свяжет capability без фиктивной domain semantics |
 
-### Проверка product data
+Можно продолжить с явным assumption только когда решение обратимо, не меняет owner/public API, не ослабляет environment boundary и не скрывает lifecycle.
 
-- Page/layout/screen/widget получает product data через `{Domain}Api`.
-- Нет прямого вызова SDK/client/generated operation из потребительской composition.
-- Нет product storage access в UI/component/composition service.
-- DTO не используется как domain/view contract без business normalization.
-- Один источник не имеет параллельного прямого и business-пути.
+## Проверочные списки
 
-### Проверка ошибок
+### До изменения файлов
 
-Для каждого public runtime operation проверь:
+- [ ] Найден SLM root и path mapping.
+- [ ] Найдены architecture declarations, metadata и environment/business-safe allowlists проекта.
+- [ ] Прочитаны локальные инструкции.
+- [ ] Сформулирована responsibility.
+- [ ] Назначен один owner.
+- [ ] Выбраны layer и entity.
+- [ ] Для domain выбрана одна form.
+- [ ] Найдены реальные consumers.
+- [ ] Спроектирован минимальный public API.
+- [ ] Классифицированы static и runtime dependencies.
+- [ ] Проверены layer, cross-domain и environment edges.
+- [ ] Для resources определены scope и cleanup.
+- [ ] Нет активного stop condition.
 
-- rejected dependency;
-- synchronous throw dependency;
-- `undefined`/`null`/empty body;
-- объект неправильной формы;
-- source hook error;
-- invalid state/storage value;
-- неизвестную runtime-ошибку.
+### После реализации
 
-Во всех случаях наружу выходит только domain error со стабильным `code`. Source error сохраняется в `cause`, но не становится consumer contract. Technical failure и malformed response нельзя превращать в fallback; fallback разрешён только для валидного доменного исхода.
+- [ ] Каждый module имеет отдельную boundary и public API.
+- [ ] Нет deep imports и package/Group barrels.
+- [ ] Layer matrix соблюдена.
+- [ ] Общий module graph ацикличен.
+- [ ] `business` import closure environment-neutral и technical-runtime-free.
+- [ ] Runtime APIs, пересекающие Level 2 package boundary, передаются аргументами; L1 -> L1 использует public API.
+- [ ] Новые external imports `business` доказанно business-safe и объявлены в allowlist.
+- [ ] Client/server graphs не содержат несовместимый executable code.
+- [ ] Facets `business` имеют допустимое содержимое и consumers.
+- [ ] Production technical dependencies принадлежат нужным adapters.
+- [ ] Assembly или одноразовый graph owner возвращает точный graph и очищает owned resources после успеха и partial failure.
+- [ ] Framework bindings получают готовые APIs.
+- [ ] Все expected scenario failures имеют собственный stable domain error; technical и foreign errors не протекают наружу.
+- [ ] Cache не подменяет business authority.
+- [ ] Architecture mapping, exports, facets и environment declarations соответствуют новым путям.
+- [ ] Tests проверяют behavior соответствующих owners.
+- [ ] После migration удалена старая form/boundary.
 
-Не оставляй формулировку «domain error, если контракт это обещает». Business public contract всегда обещает только domain errors.
+## Формат результата
 
-### Проверка state и hooks
+Не печатай полную внутреннюю карточку и все checklists без необходимости. Пользователю нужен результат задачи.
 
-- Business владеет domain state model, но не concrete state manager.
-- Zustand/Redux/MobX store создаётся adapter-ом, не factory.
-- SWR/Query hook создаётся adapter-ом, не business-модулем.
-- Dependency hook является non-throwing/non-Suspense и передаёт technical error через business-owned result.
-- Business wrapper вызывает dependency hook и возвращает собственный result type.
-- Business wrapper преобразует error result и ошибки callbacks в domain errors.
-- Store/query library types отсутствуют в public API и `Deps`.
-- Определены creator, scope, количество instances и cleanup.
-- Module singleton используется только при явно доказанном application/process lifetime.
-- Provider не создаёт ложное впечатление владения instance, созданным на module scope.
+| Режим | Обязательный результат |
+|---|---|
+| Design | Decision, owner/layer/form, boundaries, public APIs, dependencies, lifecycle, implementation order, assumptions |
+| Implementation | Использованное решение, изменённые boundaries/files, API/import changes, tests/checks, отклонения и риски |
+| Migration | Source/target forms, consumer map, phases, cutover, удаление старой boundary и completion gate |
+| Review | Findings с evidence, verdict, remediation order, unresolved decisions и непроверенный scope |
 
-### Проверка graph
+Для однозначной локальной реализации достаточно кратко объяснить архитектурное решение и выполнить работу. Для дорогого, публично несовместимого или неоднозначного решения сначала покажи варианты и запроси выбор.
 
-- Per-domain builders собирают только свои фабрики.
-- Graph owner назван и соответствует lifecycle.
-- Домены создаются в топологическом порядке.
-- Runtime-циклы отсутствуют.
-- Один и тот же graph не копируется по нескольким providers без обоснования scope.
-- Screen/widget не собирает graph самостоятельно.
-- Provider value имеет точный тип.
-- Нет `Partial<Graph>` с unchecked cast к полному graph.
-- Subscription, timer, socket и другие resources имеют cleanup/dispose.
-- Pending operation не может записать stale state после invalidation/unmount без явно принятой политики.
+## Когда открывать references
 
-### Проверка public API
+| Ситуация | Reference |
+|---|---|
+| Нужна точная формулировка правила | [`rules/level-1.md`](./reference/draft/rules/level-1.md), [`rules/level-2.md`](./reference/draft/rules/level-2.md) |
+| Неясен смысл сущности | [`level-1/terminology.md`](./reference/draft/level-1/terminology.md), [`level-2/terminology.md`](./reference/draft/level-2/terminology.md) |
+| Сложный Level 1 module/dependency/lifecycle case | [`level-1/`](./reference/draft/level-1/README.md) |
+| Package, business, factory или adapters | [`level-2/domains/`](./reference/draft/level-2/domains/README.md) |
+| Cross-domain или environment edge | [`level-2/dependencies.md`](./reference/draft/level-2/dependencies.md) |
+| State, cache, SSR или hydration | [`state-cache.md`](./reference/draft/level-2/domains/state-cache.md), [`open-questions.md`](./reference/draft/level-2/domains/open-questions.md) |
+| Assembly lifecycle и cleanup | [`assemblies.md`](./reference/draft/level-2/domains/assemblies.md) |
+| Full architecture review | [`level-1/validation.md`](./reference/draft/level-1/validation.md), [`level-2/validation.md`](./reference/draft/level-2/validation.md) |
+| L1 -> L2 migration example | [`auth-example.md`](./reference/draft/level-2/domains/auth-example.md) |
 
-- Межмодульные импорты идут через реальный public entrypoint.
-- Import alias/package export существует физически.
-- Group не имеет `index.ts`.
-- Business `index.ts` экспортирует runtime только factory, остальное через `export type`.
-- Integration module экспортирует builder и необходимые type-only integration input contracts.
-- Raw context, raw store, mutable singleton, adapter, generated operation и persistence key закрыты.
-- Каждый export имеет реального внешнего consumer.
-- Deep imports отсутствуют, включая tests уровня public contract.
-
-### Проверка тестов
-
-Business-модуль не завершён без factory-level tests.
-
-Обязательный минимум:
-
-1. Форма public API фабрики.
-2. Happy path каждого runtime method/hook.
-3. Invalid dependency response.
-4. Rejected dependency.
-5. Synchronous throw каждого обычного method/callback/state/lifecycle dependency. Dependency hooks проверяются отдельным non-throwing contract.
-6. Domain error `code` и `cause`.
-7. Порядок side effects и остановка после ошибки.
-8. State transitions и concurrent calls.
-
-`compositions/business/{domain}` не завершён без assembly tests:
-
-1. Factory получает правильные adapters.
-2. Каждый adapter вызывает нужный runtime source с правильным payload.
-3. Builder не делает I/O при создании API.
-4. Cross-domain API передан в правильном виде.
-5. Private adapters не раскрыты public API.
-6. Adapter пробрасывает source error без создания domain error.
-7. Dependency hook не бросает и не использует Suspense/throw-on-error mode.
-8. Lifecycle cleanup проверен, если есть subscriptions/resources.
-
-Colocated tests обязательны для mappers, normalizers, type guards, domain errors и другой внутренней runtime-safe логики. Они дополняют, но не заменяют factory-level tests. Подробная матрица находится в [Тестировании business-модулей](./reference/examples/business-testing.md).
-
-Проверь наличие исполняемого test script и test runner именно в изменяемом workspace. Root task без локального script не является выполненной тестовой инфраструктурой.
-
-### Проверка целостности репозитория
-
-- Все imports разрешаются.
-- Все упомянутые modules и public entrypoints существуют.
-- Direct runtime packages объявлены в package текущего workspace.
-- Старый provider/store/source path удалён после миграции, если больше не используется.
-- Нет speculative scaffold с пустым graph, несуществующими доменами или placeholder contracts.
-- Template исправлен, если именно он системно создаёт нарушение.
-- Выполнены доступные typecheck, tests, lint/build и `git diff --check`.
-
-### Формат архитектурного ревью
-
-Для каждого нарушения укажи:
-
-1. Путь и строку.
-2. Нарушенный invariant.
-3. Runtime или maintenance риск.
-4. Минимальную корректную границу.
-5. Необходимые tests.
-
-Отделяй обязательное нарушение от необязательного улучшения. Не предлагай большую миграцию, если нарушение можно устранить локально без создания второй архитектуры.
-
-### Финальный gate
-
-Перед завершением ответь «да» на все вопросы:
-
-- Архитектурная роль изменения определена?
-- Владелец ответственности и state определён?
-- Все runtime-capabilities проходят через правильную границу?
-- Product data проходит через business API?
-- Business вызывает только переданные deps и собственную детерминированную логику?
-- Наружу выходят только domain errors?
-- Adapters существуют и закрыты?
-- Graph и lifecycle определены?
-- Public API минимален и разрешим?
-- Обязательные tests созданы и запущены?
-- Изменение не оставило старый параллельный путь?
-
-Если хотя бы один ответ «нет», задача не завершена.
+Будущие project examples открывай только после архитектурной классификации. Используй их как evidence конкретной реализации для похожего stack/environment, но не копируй naming, дерево или дополнительные роли без потребности. Example никогда не переопределяет rule или terminology.

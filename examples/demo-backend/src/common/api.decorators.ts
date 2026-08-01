@@ -9,11 +9,17 @@ import {
   ApiResponse,
   ApiTooManyRequestsResponse,
   ApiUnauthorizedResponse,
+  ApiUnprocessableEntityResponse,
 } from "@nestjs/swagger";
 import { ErrorResponseDto } from "./api.dto";
 
 export function ApiStandardErrors(
-  options: { auth?: boolean; notFound?: boolean; conflict?: boolean } = {},
+  options: {
+    auth?: boolean;
+    notFound?: boolean;
+    conflict?: boolean;
+    unprocessable?: boolean;
+  } = {},
 ) {
   const decorators: Array<
     ClassDecorator | MethodDecorator | PropertyDecorator
@@ -58,6 +64,15 @@ export function ApiStandardErrors(
     decorators.push(
       ApiConflictResponse({
         description: "Business or optimistic-lock conflict.",
+        type: ErrorResponseDto,
+      }),
+    );
+  }
+
+  if (options.unprocessable) {
+    decorators.push(
+      ApiUnprocessableEntityResponse({
+        description: "The validated request violates an order invariant.",
         type: ErrorResponseDto,
       }),
     );

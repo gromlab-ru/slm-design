@@ -351,21 +351,54 @@ export class SimpleStore {
         details: [{ field: "items", message: "Add at least one item." }],
       });
     }
-    const items = dto.items.map(({ productId, quantity }) => {
-      const product = this.getProduct(productId);
-      if (product.stock < quantity) {
-        throw new ConflictException({
-          code: "INSUFFICIENT_STOCK",
-          message: `Not enough stock for ${product.name}.`,
+    const productIds = new Set<string>();
+
+    dto.items.forEach((item) => {
+      if (productIds.has(item.productId)) {
+        throw new UnprocessableEntityException({
+          code: "DUPLICATE_ORDER_PRODUCT",
+          message: "Each product may appear only once in an order.",
         });
       }
-      return {
-        productId,
-        productName: product.name,
-        quantity,
-        unitPriceCents: product.priceCents,
-      };
+
+      productIds.add(item.productId);
     });
+
+    const items = dto.items.map(
+      ({ productId, quantity, expectedVersion, expectedUnitPriceCents }) => {
+        const product = this.getProduct(productId);
+
+        if (
+          product.version !== expectedVersion ||
+          product.priceCents !== expectedUnitPriceCents
+        ) {
+          throw new ConflictException({
+            code: "PRODUCT_CHANGED",
+            message: `${product.name} changed before checkout.`,
+          });
+        }
+
+        if (product.currency !== "USD") {
+          throw new UnprocessableEntityException({
+            code: "UNSUPPORTED_ORDER_CURRENCY",
+            message: "Simple API checkout accepts USD products only.",
+          });
+        }
+
+        if (product.stock < quantity) {
+          throw new ConflictException({
+            code: "INSUFFICIENT_STOCK",
+            message: `Not enough stock for ${product.name}.`,
+          });
+        }
+        return {
+          productId,
+          productName: product.name,
+          quantity,
+          unitPriceCents: product.priceCents,
+        };
+      },
+    );
     const order: SimpleOrderDto = {
       id: `order-${String(this.orderSequence++).padStart(3, "0")}`,
       userId,
@@ -417,7 +450,7 @@ export class SimpleStore {
       stock,
       rating,
       imageUrl: `https://picsum.photos/seed/${slug}/640/480`,
-      createdAt: `2026-07-${String(10 + this.products.length).padStart(2, "0")}T09:00:00.000Z`,
+      createdAt: "2026-07-10T09:00:00.000Z",
       version: 1,
     };
   }

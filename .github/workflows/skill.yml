@@ -1,0 +1,60 @@
+name: Skill
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - '.github/workflows/skill.yml'
+      - 'DRAFT/**'
+      - 'src-skills/**'
+      - 'skills/**'
+      - 'scripts/build-skill.mjs'
+      - 'scripts/check-skill.mjs'
+      - 'scripts/lib/skill-bundle.mjs'
+      - 'scripts/lib/slugify-heading.mjs'
+      - 'tests/skill-bundle.test.mjs'
+      - 'site/.vitepress/config.mts'
+      - 'draft-rules.js'
+      - 'package.json'
+      - 'package-lock.json'
+  pull_request:
+    paths:
+      - '.github/workflows/skill.yml'
+      - 'DRAFT/**'
+      - 'src-skills/**'
+      - 'skills/**'
+      - 'scripts/build-skill.mjs'
+      - 'scripts/check-skill.mjs'
+      - 'scripts/lib/skill-bundle.mjs'
+      - 'scripts/lib/slugify-heading.mjs'
+      - 'tests/skill-bundle.test.mjs'
+      - 'site/.vitepress/config.mts'
+      - 'draft-rules.js'
+      - 'package.json'
+      - 'package-lock.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check rules and skill
+        run: npm run test:skill && npm run check:draft-rules && npm run check:skill
+
+      - name: Rebuild skill deterministically
+        run: mv skills/slm-design "$RUNNER_TEMP/slm-design-expected" && npm run build:skill && diff -qr "$RUNNER_TEMP/slm-design-expected" skills/slm-design && git diff --exit-code -- skills/slm-design

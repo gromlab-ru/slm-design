@@ -270,7 +270,7 @@ export class SimpleOrdersController {
   @Post()
   @ApiOperation({ summary: "Create an order and validate product stock" })
   @ApiCreatedResponse({ type: OrderResponseDto })
-  @ApiStandardErrors({ auth: true, conflict: true })
+  @ApiStandardErrors({ auth: true, conflict: true, unprocessable: true })
   create(
     @Req() request: DemoRequest,
     @Body() dto: CreateOrderDto,

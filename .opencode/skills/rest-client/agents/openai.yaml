@@ -1,0 +1,4 @@
+interface:
+  display_name: "REST Client"
+  short_description: "Generated и manual REST-клиенты проекта"
+  default_prompt: "Use $rest-client to generate, update, or review REST clients and their integration points in the monorepo."

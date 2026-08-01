@@ -151,9 +151,137 @@ describe("Simple API", () => {
     const order = await request(app.getHttpServer())
       .post("/api/v1/orders")
       .set("Authorization", authorization)
-      .send({ items: [{ productId: "product-keyboard", quantity: 1 }] })
+      .send({
+        items: [
+          {
+            productId: "product-keyboard",
+            quantity: 1,
+            expectedVersion: 1,
+            expectedUnitPriceCents: 12990,
+          },
+        ],
+      })
       .expect(201);
     expect(order.body.data.userId).toBe("user-customer");
     expect(order.body.data.totalCents).toBe(12990);
+  });
+
+  it("does not execute a timeout mutation after the client disconnects", async () => {
+    const customer = await login("customer@demo.local");
+    const authorization = `Bearer ${customer.body.data.tokens.accessToken as string}`;
+    const ordersBefore = await request(app.getHttpServer())
+      .get("/api/v1/orders")
+      .set("Authorization", authorization)
+      .expect(200);
+    const previousDelay = process.env.MOCK_TIMEOUT_DELAY_MS;
+
+    process.env.MOCK_TIMEOUT_DELAY_MS = "100";
+
+    try {
+      await request(app.getHttpServer())
+        .post("/api/v1/orders")
+        .set("Authorization", authorization)
+        .set("X-Demo-Scenario", "timeout")
+        .send({
+          items: [
+            {
+              productId: "product-keyboard",
+              quantity: 1,
+              expectedVersion: 1,
+              expectedUnitPriceCents: 12990,
+            },
+          ],
+        })
+        .timeout({ deadline: 10 });
+    } catch {
+      // The client intentionally closes the response before the mutation delay elapses.
+    } finally {
+      if (previousDelay === undefined) {
+        delete process.env.MOCK_TIMEOUT_DELAY_MS;
+      } else {
+        process.env.MOCK_TIMEOUT_DELAY_MS = previousDelay;
+      }
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 150));
+
+    const ordersAfter = await request(app.getHttpServer())
+      .get("/api/v1/orders")
+      .set("Authorization", authorization)
+      .expect(200);
+
+    expect(ordersAfter.body.meta.total).toBe(ordersBefore.body.meta.total);
+  });
+
+  it("rejects an order when the confirmed product snapshot changed", async () => {
+    const customer = await login("customer@demo.local");
+    const authorization = `Bearer ${customer.body.data.tokens.accessToken as string}`;
+
+    const response = await request(app.getHttpServer())
+      .post("/api/v1/orders")
+      .set("Authorization", authorization)
+      .send({
+        items: [
+          {
+            productId: "product-keyboard",
+            quantity: 1,
+            expectedVersion: 1,
+            expectedUnitPriceCents: 1,
+          },
+        ],
+      })
+      .expect(409);
+
+    expect(response.body.code).toBe("PRODUCT_CHANGED");
+  });
+
+  it("rejects duplicate product lines and unsupported order currency", async () => {
+    const admin = await login();
+    const adminAuthorization = `Bearer ${admin.body.data.tokens.accessToken as string}`;
+    const customer = await login("customer@demo.local");
+    const customerAuthorization = `Bearer ${customer.body.data.tokens.accessToken as string}`;
+    const line = {
+      productId: "product-keyboard",
+      quantity: 20,
+      expectedVersion: 1,
+      expectedUnitPriceCents: 12990,
+    };
+    const duplicateResponse = await request(app.getHttpServer())
+      .post("/api/v1/orders")
+      .set("Authorization", customerAuthorization)
+      .send({ items: [line, line] })
+      .expect(422);
+
+    expect(duplicateResponse.body.code).toBe("DUPLICATE_ORDER_PRODUCT");
+
+    const eurProduct = await request(app.getHttpServer())
+      .post("/api/v1/products")
+      .set("Authorization", adminAuthorization)
+      .send({
+        name: "Euro Product",
+        description: "A deterministic product priced in euros.",
+        priceCents: 1000,
+        currency: "EUR",
+        categoryId: "category-books",
+        stock: 5,
+        imageUrl: "https://picsum.photos/seed/euro-product/640/480",
+      })
+      .expect(201);
+    const currencyResponse = await request(app.getHttpServer())
+      .post("/api/v1/orders")
+      .set("Authorization", customerAuthorization)
+      .send({
+        items: [
+          {
+            productId: eurProduct.body.data.id,
+            quantity: 1,
+            expectedVersion: eurProduct.body.data.version,
+            expectedUnitPriceCents: eurProduct.body.data.priceCents,
+          },
+        ],
+      })
+      .expect(422);
+
+    expect(currencyResponse.body.code).toBe("UNSUPPORTED_ORDER_CURRENCY");
   });
 });

@@ -1,0 +1,40 @@
+{
+  "name": "demo-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "check:architecture": "node scripts/check-architecture.mjs",
+    "check": "npm run check:architecture && npm run lint && npm run typecheck && npm run test",
+    "codegen:simple-rest-api": "npx @gromlab/api-codegen@5.1.1 -i ../demo-backend/openapi/simple.json -o src/infra/simple-rest-api/generated"
+  },
+  "dependencies": {
+    "clsx": "2.1.1",
+    "next": "16.2.12",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "swr": "2.4.2"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@next/eslint-plugin-next": "16.2.12",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "10.8.0",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "globals": "17.8.0",
+    "typescript": "^5",
+    "typescript-eslint": "8.65.0",
+    "vitest": "4.1.10"
+  },
+  "overrides": {
+    "postcss": "8.5.25",
+    "sharp": "0.35.3"
+  }
+}
