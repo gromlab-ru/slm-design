@@ -1,81 +1,126 @@
 # Проверка Level 2
 
-> Граница автоматической проверки, архитектурного ревью и тестирования Level 2.
+> Граница автоматической проверки, architecture review и contract tests Level 2.
 
 ## Конфигурация проекта
 
-Конфигурация проверки сопоставляет физические пути с доменными модулями Level 1, доменными пакетами Level 2, metadata, SLM-модулями, Groups, фасетами `business`, техническими зависимостями, adapter-модулями, assemblies, публичными точками входа, метками сред выполнения и allowlist внешних business-safe пакетов.
+Конфигурация проверки сопоставляет физические пути с:
 
-Формат такой конфигурации пока не выбран. Независимо от формата проверка анализирует объявленные границы и import-граф, а не угадывает сущность только по имени папки.
+- доменными модулями Level 1 и пакетами Level 2;
+- metadata, SLM-модулями и Groups;
+- фасетами `api`;
+- dependency ports и adapter modules;
+- assemblies и их baseline/special contexts;
+- public entry points;
+- executable, type-only, framework reference и deferred edges;
+- environment capability sets, resolver conditions и framework execution phases;
+- API-safe external packages;
+- runtime assembly inputs и создаваемыми API, если проект автоматизирует runtime DAG.
+
+Формат такой конфигурации пока не выбран. Проверка анализирует объявленные boundaries и resolved graphs, а не угадывает сущность только по имени папки.
 
 ## Автоматическая проверка
 
-Автоматическая проверка блокирует:
+Каждое правило класса `A` реализуется блокирующей проверкой проекта. Автоматическая проверка обнаруживает:
 
-- одновременное объявление одной предметной области доменным модулем и пакетом;
-- исполняемый файл, root `index.ts`, состояние или реэкспорт в корне доменного пакета;
-- отсутствие `business` или несколько модулей `business` в одном пакете;
-- отсутствие `business` либо `business/factory`, runtime export из корневого barrel, export не-фабрики из `business/factory`, type export из `business/runtime`, другой публичный путь либо deep import внутри `business`;
-- импорт фасета `business` потребителем, которому этот фасет не разрешён;
-- отсутствие непосредственно в корне пакета непустой Group `assemblies` или наличие в ней прямого дочернего элемента без объявленной модульной границы;
-- deep imports во внутренние части модулей;
-- runtime- или type-only достижимость framework-, adapter-, assembly-, infra- или environment-specific кода из `business`;
-- запрещённый runtime-импорт через границу пакета Level 2;
-- type-only импорт не из публичной точки входа владельца;
-- импорт framework state, hooks, contexts или components другого домена;
-- достижимость server-only кода из client-entry point и обратное несовместимое направление;
-- runtime- или type-only циклы в графе модулей.
+- одновременное объявление одной предметной области module и package;
+- executable file, root `index.ts`, state или reexport в корне package;
+- отсутствие `api` или несколько модулей `api`;
+- отсутствие `api` либо `api/factory`;
+- недопустимый type/runtime export kind фасетов `api`, `api/ports`, `api/factory` и `api/runtime`;
+- другой public path или deep import внутри `api`;
+- отсутствие Group `assemblies` или модуля `assemblies/default`;
+- прямой дочерний элемент `assemblies` или `adapters` без module boundary;
+- нарушение importer matrix ports, factories и concrete adapters;
+- достижимость adapter, assembly, framework, SDK, storage, state/query runtime или environment-specific code из `api`;
+- запрещённый cross-domain import;
+- type-only import не из public facet владельца;
+- import framework state, hooks, contexts или components другого домена;
+- несовместимую executable reachability под каждым configured resolver condition set;
+- runtime- или type-only cycles статического module graph.
 
-Статический анализ может отдельно находить прямые вызовы `Date.now`, `Math.random`, `crypto.randomUUID`, timers и чтение env внутри `business`. Окончательное решение о скрытом недетерминизме остаётся за ревью.
+Проверка external package reachability использует project allowlist API-safe packages. Решение о том, соответствует ли package критериям API-safe, принимается на review; автоматизация проверяет объявленный label и фактически resolved entries.
 
-## Архитектурное ревью
+Неанализируемые dynamic imports запрещаются или явно allowlist-ятся project policy с target capability set.
 
-На ревью определяется:
+## Architecture review
 
-- представляет ли пакет одну связную предметную область;
-- принадлежит ли каждая соседняя область ровно одной форме независимо от форм других доменов;
-- принадлежат ли публичные сценарии ровно одному из именованных Domain API;
-- оправдано ли разделение API разными consumers, dependencies или assemblies, а не техническим дроблением;
-- остаются ли модель, validation и transitions под предметной властью `business`;
-- не создаёт ли state/query cache параллельную продуктовую модель или raw DTO boundary;
-- соответствует ли каждой фабрике ровно один API и остаётся ли она environment-neutral;
-- содержит ли `business/runtime` только реально публичные deterministic values и functions;
-- преобразует ли business ожидаемые technical и cross-domain сбои в собственные ошибки;
-- является ли каждая связная production-реализация технических dependencies отдельным модулем Group `adapters`;
-- представляет ли каждая assembly один реальный контекст выполнения и возвращает ли точный именованный граф;
-- не запускают ли фабрики и assemblies скрытую долгоживущую работу при создании графа;
-- предоставляет ли assembly cleanup только для действительно созданного ею lifecycle-ресурса и вызывает ли graph owner этот cleanup;
-- принадлежит ли каждый framework binding module домену, а не странице или multi-domain сценарию;
-- соответствует ли каждый объявленный business-safe внешний пакет ограничениям детерминированной библиотеки без runtime capability;
-- остаются ли Framework Groups и другие Groups без реализации и агрегирующего API.
+На review определяется:
 
-## Тестирование
+- представляет ли package одну связную предметную область;
+- является ли `api` единственным семантическим шлюзом домена;
+- соответствуют ли exports `api` реальным consumer contracts, `api/ports` implementer contracts, а `api/factory` объявленным Domain API factories;
+- отличаются ли public models от raw provider DTO там, где это необходимо;
+- принадлежат ли operations ровно одному Domain API;
+- оправдано ли разделение нескольких Domain API независимой сборкой, trust или consumers;
+- описывают ли ports consumer-owned capabilities, а не endpoints конкретного SDK;
+- достаточна ли closed failure algebra для выбора domain outcomes;
+- преобразуются ли provider и foreign-domain failures в собственные errors;
+- является ли каждая production implementation отдельным adapter module;
+- не выполняют ли framework bindings предметные external operations в обход API;
+- не создаёт ли framework projection параллельную модель;
+- определены ли optimistic ordering, versioning и reconciliation модулем `api`;
+- представляет ли `default` один реальный baseline capability context;
+- оправданы ли дополнительные assemblies реальным отличием graph;
+- остаётся ли runtime assembly graph ацикличным;
+- создаётся ли только dependency-connected часть production graph;
+- полностью ли определены lifecycle и cleanup failure paths;
+- соответствует ли каждый API-safe package ограничениям;
+- остаются ли Groups без implementation и aggregate API.
 
-Business-сценарии проверяются через соответствующие фабрики с управляемыми test fakes, включая fake clock/random/id при необходимости. Adapter module проверяет technical transformation. Assembly проверяет состав графа, выбор adapters, environment boundary и условный cleanup. Framework binding module проверяет собственный Provider, hook, cache integration или component без повторения полного набора business-сценариев.
+## Environment review
 
-Import-graph checks не заменяются runtime-тестами.
+Для каждого public entry point рассматриваются реальные executable imports под заявленными conditions. Отдельно проверяются:
+
+- RSC server execution;
+- Client Component references;
+- server prerender graph Client Components при включённом SSR;
+- browser hydration graph Client Components;
+- framework-deferred browser effects;
+- Server Action references;
+- browser, Node.js, edge и worker capabilities;
+- conditional exports external packages;
+- dynamic imports;
+- serialization boundaries.
+
+Название `default`, `rsc`, `server` или `client` не является доказательством совместимости. Tree shaking и runtime branching также не являются доказательством.
+
+## Realtime review
+
+Для каждого realtime port фиксируются:
+
+- correlation scope и ACK semantics;
+- ordering и duplicate policy;
+- disconnect, timeout и `OUTCOME_UNKNOWN`;
+- idempotency и retry;
+- reconnect, gap detection и resync;
+- cancellation;
+- shared connection owner;
+- cleanup и запрет callbacks после disposal.
+
+Без этих guarantees adapter нельзя считать проверяемой реализацией port.
+
+## Testing
+
+Domain API проверяется через factory с fake ports. Adapter проверяется contract tests concrete provider. Assembly проверяет production wiring, capabilities, partial construction и cleanup. Framework binding проверяет projection, hydration и lifecycle с fake API.
+
+Import-graph checks не заменяются runtime tests, а API fake не заменяет adapter contract test.
 
 ## Смешанный SLM root
 
-Наличие доменных модулей Level 1 рядом с пакетами Level 2 является завершённым допустимым состоянием. Проверка применяет правила формы отдельно к каждой предметной области и правила Level 2 ко всем статическим связям, пересекающим пакетную границу.
+Наличие доменных модулей Level 1 рядом с пакетами Level 2 является завершённым допустимым состоянием. Проверка применяет правила формы отдельно к каждой предметной области и правила Level 2 ко всем статическим связям, пересекающим package boundary.
 
-Переход одного домена завершается, когда его старая модульная граница удалена и checker видит только пакет. Другие домены не входят в критерий завершения.
+Переход одного домена завершается, когда его старая module boundary удалена и checker видит только package. Другие домены не входят в критерий формы, но dependency-connected consumers и graph owners входят в change radius.
 
 ## Связанные правила
 
 - [`SLM-L2-DOMAIN-A003`](../rules/level-2.md#slm-l2-domain-a003)
-- [`SLM-L2-BUSINESS-A007`](../rules/level-2.md#slm-l2-business-a007)
+- [`SLM-L2-API-A007`](../rules/level-2.md#slm-l2-api-a007)
 - [`SLM-L2-DEPENDENCY-A012`](../rules/level-2.md#slm-l2-dependency-a012)
 - [`SLM-L2-ENVIRONMENT-A013`](../rules/level-2.md#slm-l2-environment-a013)
-- [`SLM-L2-DOMAIN-A026`](../rules/level-2.md#slm-l2-domain-a026)
-- [`SLM-L2-BUSINESS-R018`](../rules/level-2.md#slm-l2-business-r018)
-- [`SLM-L2-BUSINESS-A019`](../rules/level-2.md#slm-l2-business-a019)
+- [`SLM-L2-API-A019`](../rules/level-2.md#slm-l2-api-a019)
 - [`SLM-L2-ASSEMBLY-A020`](../rules/level-2.md#slm-l2-assembly-a020)
-- [`SLM-L2-ADAPTER-R021`](../rules/level-2.md#slm-l2-adapter-r021)
-- [`SLM-L2-BUSINESS-A022`](../rules/level-2.md#slm-l2-business-a022)
-- [`SLM-L2-ASSEMBLY-R023`](../rules/level-2.md#slm-l2-assembly-r023)
-- [`SLM-L2-BUSINESS-R024`](../rules/level-2.md#slm-l2-business-r024)
-- [`SLM-L2-BUSINESS-R025`](../rules/level-2.md#slm-l2-business-r025)
-- [`SLM-L1-DEPENDENCY-A005`](../rules/level-1.md#slm-l1-dependency-a005)
+- [`SLM-L2-API-A022`](../rules/level-2.md#slm-l2-api-a022)
+- [`SLM-L2-DOMAIN-A026`](../rules/level-2.md#slm-l2-domain-a026)
 
 Скрипт `draft-rules.js` проверяет целостность реестров и ссылок документации, но не архитектуру приложения.

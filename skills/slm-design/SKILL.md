@@ -1,6 +1,6 @@
 ---
 name: slm-design
-description: "Используй при проектировании, реализации, миграции и архитектурном ревью по SLM: когда нужно определить SLM root, ответственность, владельца, слой, модульную границу, публичный API, форму домена Level 1 или Level 2, направление зависимостей, Domain API, business factory, adapter, assembly, framework binding, state/cache/error/lifecycle ownership или исправить deep import, цикл и environment leak. Не используй для локального coding, debugging, форматирования, framework- или SDK-механики, если архитектурная граница уже определена и не меняется."
+description: "Используй при проектировании, реализации, миграции и архитектурном ревью по SLM: когда нужно определить SLM root, ответственность, владельца, слой, модульную границу, публичный API, форму домена Level 1 или Level 2, направление зависимостей, Domain API, ports, factories, adapters, default assembly, framework state/cache, realtime, errors или lifecycle. Не используй для локального coding, debugging, форматирования, framework- или SDK-механики, если архитектурная граница уже определена и не меняется."
 ---
 
 # SLM Design
@@ -103,31 +103,33 @@ Navigation Group непосредственно в `domains` может соде
 ```text
 domains/<domain>/
 ├── metadata                 # optional, declarative only
-├── business/                # required SLM module
+├── api/                     # required SLM module
 ├── assemblies/              # required non-empty Group
-├── adapters/                # when factories have technical dependencies
+│   └── default/             # required baseline production assembly
+├── adapters/                # when factories have dependency ports
 └── react|vue|...            # when domain-specific bindings exist
 ```
 
 Доменный пакет является policy boundary, но не module, Group, public API или graph node. В его корне нет executable files, state, lifecycle, barrel или реэкспортов. Исполняемыми владельцами являются модули внутри пакета.
 
-`business` является единственным предметным владельцем пакета. Его публичный API состоит из фасетов:
+`api` является единственным семантическим шлюзом пакета. Его публичный API состоит из фасетов:
 
 | Путь | Содержимое |
 |---|---|
-| `business` | Только public types: Domain API, dependencies, factory types, error types |
-| `business/factory` | Только именованные runtime factories, по одной на Domain API |
-| `business/runtime` | Только реально нужные внешним consumers детерминированные runtime values/functions |
+| `api` | Только consumer-facing public types: Domain API, models, outcomes, errors |
+| `api/ports` | Implementer-facing types при наличии dependency ports |
+| `api/factory` | Только именованные runtime factories, по одной на Domain API |
+| `api/runtime` | Только реально нужные внешним consumers детерминированные runtime values/functions |
 
-Другой публичный путь внутрь `business` является deep import. `business/runtime` не создавай для симметрии.
+Другой публичный путь внутрь `api` является deep import. `api/ports` и `api/runtime` не создавай без реальной границы или consumer.
 
 Роли Level 2:
 
-- `business` определяет Domain API, модели, validation, transitions, scenario results, dependency contracts и expected domain errors.
-- Adapter module реализует связанные technical dependencies поверх SDK, storage, platform API, state/query runtime или другого technical runtime.
-- Assembly module выбирает adapters, вызывает factories и возвращает именованный graph готовых API для одного execution context.
-- Framework binding module получает готовые Domain API и владеет одной domain-specific интеграцией с framework.
-- Composition, `app`, request handler или test setup собирает междоменный graph в ацикличном порядке и владеет его общим scope.
+- `api` определяет Domain API, public models, validation, outcomes, dependency ports и expected domain errors, но не framework state/cache.
+- Adapter module реализует связанные dependency ports поверх SDK, storage, platform API, transport или другого provider runtime.
+- `assemblies/default` выбирает штатные adapters, вызывает factories и возвращает baseline graph готовых API; дополнительные assemblies представляют отличающиеся production contexts.
+- Framework binding module получает готовые Domain API и владеет domain-specific state, cache, hydration и framework integration.
+- Composition, `app`, request handler или test setup вызывает assemblies в ацикличном порядке и владеет общим scope graph.
 
 ## Универсальный цикл решения
 
@@ -144,7 +146,7 @@ domains/<domain>/
 - места создания graph и instances;
 - subscriptions, timers, requests, connections и cleanup;
 - тесты и команды проверки затрагиваемых owners.
-- architecture mapping, metadata, environment declarations и business-safe allowlists, если проект их использует.
+- architecture mapping, assembly contexts, environment declarations и API-safe allowlists, если проект их использует.
 
 Считай type-only import и reexport архитектурным ребром. Для runtime-графа дополнительно ищи arguments factories, callbacks, registries, event buses, service locators и singletons: фактическая зависимость может не иметь прямого runtime import.
 
@@ -277,8 +279,10 @@ Framework UI entity не имеет самостоятельной ответс�
 Рассматривай Level 2, когда конкретному домену действительно нужны:
 
 - несколько независимо собираемых Domain API;
-- разные browser/server/request assemblies;
+- собственные public models и stable errors поверх provider contracts;
+- baseline `assemblies/default` и дополнительные production contexts;
 - несколько production technical integrations;
+- HTTP, storage или realtime behind consumer-owned ports;
 - строгие environment boundaries;
 - самостоятельные domain-specific framework modules.
 
@@ -289,13 +293,13 @@ Framework UI entity не имеет самостоятельной ответс�
 1. Перечисли реальных внешних consumers.
 2. Для каждого запиши минимально необходимый contract.
 3. Удали exports, которым нет consumer.
-4. Не включай mutable internals, concrete clients, stores, contexts, adapter implementations или lifecycle internals в API домена, `business` или parent module.
+4. Не включай mutable internals, concrete clients, stores, contexts, adapter implementations или lifecycle internals в Domain API, модуль `api` или parent module.
 5. Для обычного module оставь одну логическую external entry point.
-6. Для `business` используй только объявленные facets.
+6. Для модуля `api` используй только `api`, `api/factory`, optional `api/ports` и optional `api/runtime`.
 7. Удали deep imports и обнови package exports/aliases при необходимости.
 8. Не открывай nested module напрямую за пределы parent boundary.
 
-Каждый adapter остаётся обычным SLM-модулем и предоставляет собственный минимальный public API, через который assembly получает production implementation. Запрещён не public API adapter-модуля, а его реэкспорт через `business`, корень пакета, Domain API или другой несвязанный owner.
+Каждый adapter остаётся обычным SLM-модулем и предоставляет собственный минимальный public API, через который assembly получает production implementation. Запрещён не public API adapter-модуля, а его реэкспорт через `api`, корень пакета, Domain API или другой несвязанный owner.
 
 Для Level 2 разделяй Domain API по устойчивым различиям consumers, dependencies или environments, а не по внутренним техническим папкам. Каждый публичный scenario принадлежит ровно одному Domain API; каждому API соответствует одна factory. Именованный graph assembly не является новым Domain API.
 
@@ -309,7 +313,7 @@ Framework UI entity не имеет самостоятельной ответс�
 4. Проверь матрицу слоёв.
 5. Если edge пересекает Level 2 package boundary, примени более строгую cross-domain модель.
 6. Проверь transitive environment compatibility.
-7. Добавь edge в общий module DAG и проверь цикл.
+7. Добавь edge в общий module DAG и runtime graph и проверь цикл, включая callbacks и mixed L1/L2 construction.
 
 Между двумя доменными модулями Level 1 допустим обычный runtime-import публичного API при соблюдении layer matrix и DAG. Не навязывай им runtime injection Level 2.
 
@@ -317,11 +321,11 @@ Framework UI entity не имеет самостоятельной ответс�
 
 ```ts
 import type { LevelOneDomainApi } from '.../level-one-domain'
-import type { LevelTwoDomainApi } from '.../level-two-domain/business'
-import { deterministicValue } from '.../level-two-domain/business/runtime'
+import type { LevelTwoDomainApi } from '.../level-two-domain/api'
+import { deterministicValue } from '.../level-two-domain/api/runtime'
 ```
 
-Готовый runtime API, связь с которым пересекает Level 2 package boundary, создаёт внешний graph owner и передаёт assembly или factory аргументом. Через такую границу не импортируй чужую factory, assembly, adapter, API singleton, framework state, hook, context, Provider, component или внутренний путь `business`.
+Готовый runtime API, связь с которым пересекает Level 2 package boundary, создаёт внешний graph owner и передаёт assembly зависимого пакета Level 2 либо явной construction point/public callback модуля Level 1. Через такую границу не импортируй чужие `api/ports`, factory, assembly, adapter, API singleton, framework state, hook, context, Provider, component или внутренний путь `api`.
 
 Не скрывай cross-domain dependency локальным structural interface, callback, global registry или event bus. Установи владельца контракта и отрази фактический runtime edge в graph, иначе можно пропустить цикл.
 
@@ -330,31 +334,31 @@ import { deterministicValue } from '.../level-two-domain/business/runtime'
 | Capability | Размещение в Level 2 |
 |---|---|
 | SDK, HTTP/GraphQL source, storage, platform API | Adapter |
-| Concrete state/query runtime для business dependency | Adapter |
-| Clock, timer, random, ID, environment | Явная factory dependency с production implementation в adapter |
+| Concrete state/query runtime для materialized domain values | Framework binding или composition |
+| Clock, timer, random, ID, environment | Dependency port с production implementation в adapter |
 | Готовый API другого домена | Cross-domain dependency, передаваемая graph owner |
 | Provider, hook или query projection готового Domain API | Framework binding module |
 | Page-local или multi-domain UI state | Владеющий composition module |
 | Универсальный technical service | `infra` module |
 
-Adapter переводит technical arguments/results и реализует dependency contract. Он не объявляет Domain API scenario, domain fallback, transition или public domain error. Production implementation technical dependency не прячь inline в assembly или composition.
+Adapter переводит provider arguments, records и expected failures в consumer-owned port. Он не объявляет Domain API scenario, domain fallback, transition или public domain error. Production implementation port не прячь inline в assembly или composition.
 
-Assembly выбирает public adapters своего домена, вызывает factories и возвращает точный именованный graph API. Она не добавляет scenarios, методы API или собственные domain errors. Framework binding получает готовые API и не вызывает factory/assembly и не выбирает adapter.
+`assemblies/default` выбирает штатные adapters, вызывает factories и возвращает baseline graph API. Дополнительная assembly представляет реально отличающийся production context. Они не добавляют scenarios, методы API или собственные domain errors. Framework binding получает готовые API и не вызывает factory/assembly и не выбирает adapter.
 
 Даже если готовый `infra` API структурно совпадает с technical dependency, текущие правила Level 2 требуют production implementation в adapter-модуле домена. Сделай его public API минимальным и не добавляй фиктивные преобразования, но не обходи обязательную adapter boundary прямой передачей `infra` capability в factory.
 
-Перед новым external import в `business`:
+Перед новым external import в `api`:
 
 1. Определи реально resolved package entry и resolver conditions нужных environments.
 2. Проверь transitive runtime graph, side effects, I/O, mutable state и runtime capabilities.
-3. Убедись, что package соответствует business-safe критериям, и обнови project allowlist/declaration.
+3. Убедись, что package соответствует API-safe критериям, и обнови project allowlist/declaration.
 4. Если доказательства нет, вынеси capability в factory dependency и реализуй production binding через adapter.
 
 ### State и cache
 
 ```text
-Domain facts, validation, transitions, commands, scenario outcomes
-  -> business authority
+Domain models, validation, transitions, commands, scenario outcomes
+  -> api authority
 
 Transport/source cache
   -> adapter
@@ -366,18 +370,25 @@ State только текущей UI composition
   -> composition owner
 ```
 
-Raw DTO, query-library result и mutable client не являются Domain API. Private source cache внутри adapter может хранить raw transport data, если DTO и library types не выходят в Domain API. Framework projection и любые публикуемые domain values используют только форму, произведённую или проверенную `business`, и не создают параллельную предметную модель.
+Raw DTO, query-library result и mutable client не являются Domain API. Private source cache внутри adapter может хранить provider records, если DTO и library types не выходят в Domain API. Binding может владеть framework metadata и local UI state, но domain payload projection использует только public values, outcomes и events, произведённые или проверенные `api`, и не создаёт параллельную предметную модель.
 
-При optimistic или concurrent mutations не придумывай универсальный rollback. Сначала установи owner политики ordering, versioning, rebase/rollback и authoritative refresh.
+При optimistic или concurrent mutations не придумывай универсальный rollback. Предметные ordering, versioning, rebase/rollback и reconciliation определяет операция Domain API либо deterministic `api/runtime`; иначе binding invalidates projection и получает authoritative snapshot через API.
 
 ### Errors
 
 - Каждый expected failure публичного scenario, включая собственный domain rejection, представлен именованным readonly error type текущего домена со stable code.
-- Expected technical или foreign-domain failure, доступный через текущий Domain API, преобразуется текущим `business` в такой собственный domain error.
+- Expected provider failure проходит через adapter и closed port failure, после чего текущий `api` преобразует его в собственный domain error.
+- Expected foreign-domain outcome или error поступает через готовый публичный API другого домена и преобразуется текущим `api` напрямую, без автоматического local port.
 - Source object, SDK class, message, status, payload и `cause` не входят в public domain contract.
-- Type errors экспортируются через `business`; необходимые runtime codes и guards - только через реально нужный `business/runtime`.
+- Type errors экспортируются через `api`; необходимые runtime codes и guards - только через реально нужный `api/runtime`.
 - Не выбирай exception или discriminated `Result` как правило SLM: сохрани project policy и архитектурное владение.
 - Не маскируй programming defect под expected domain outcome. Если меняется публичный failure channel, выясни политику unexpected failures, cancellation и serialization.
+
+### Realtime
+
+Realtime transport остаётся внутри adapter. Domain API публикует только проверенные events, outcomes, statuses и stable errors. Для command-response protocol установи correlation scope, ACK semantics, timeout, cancellation и `OUTCOME_UNKNOWN`; без correlation не обещай индивидуальный result.
+
+Для каждой subscription установи ordering, duplicate delivery, reconnect, gap detection, resync, shared connection ownership и момент, после которого cleanup гарантирует отсутствие callbacks. Framework binding materializes events через API-owned transition либо invalidates cache и повторно запрашивает snapshot.
 
 ### Lifecycle и environment
 
@@ -393,11 +404,11 @@ Owned or borrowed:
 Cleanup:
 ```
 
-Factory или assembly не должна запускать неучтённую долгоживущую работу. Явная операция, запускающая ресурс, предоставляет cleanup. Если assembly обязана создать resource для graph, её публичный result предоставляет cleanup handle; graph owner вызывает его не позже конца scope. Assembly без собственного ресурса не возвращает пустой `dispose` для симметрии.
+Factory не запускает долгоживущую работу. Явная операция, запускающая resource, предоставляет cleanup. У каждого resource один owner: adapter-owned resource экспортирует handle для aggregate cleanup, assembly-owned resource передаётся adapter как borrowed capability. Assembly немедленно регистрирует cleanup каждого owned resource и полученный adapter lifecycle handle; при любом obligation возвращает идемпотентный aggregate cleanup.
 
-Спроектируй и failure path любой сборки graph. Если assembly, composition, `app`, request handler или test setup уже создали owned resources и следующий шаг завершился ошибкой до возврата готового graph, текущий graph owner очищает созданное в обратном dependency order. Если rollback, async cleanup или repeated disposal имеют значимую семантику, не придумывай её молча: зафиксируй решение и покрой partial-acquisition test.
+Спроектируй failure path assembly. Если следующий шаг завершился ошибкой до возврата graph, assembly выполняет все зарегистрированные cleanup obligations в обратном dependency order. После awaited cleanup callbacks запрещены. Покрой partial acquisition, adapter handles, repeated disposal и cleanup errors тестами.
 
-Environment определяется transitive import graph, а не именем файла или tree shaking. Для RSC, server actions, workers, edge runtime и conditional exports сначала установи реальные executable edges, framework reference edges и runtime capabilities; не объявляй environment safety только по метке `client`/`server`.
+Environment определяется transitive import graph, а не именем файла или tree shaking. Для RSC, Server Actions, workers, edge runtime и conditional exports установи executable edges, framework references и runtime capabilities. Для SSR-enabled Client Component отдельно проверь server prerender graph, browser hydration graph и framework-deferred browser effects.
 
 ## Рабочие процедуры
 
@@ -420,13 +431,13 @@ Environment определяется transitive import graph, а не имене
 1. Зафиксируй принятое решение и change scope.
 2. Изменяй код в dependency order: contracts и behavior раньше adapters и assembly, providers/consumers после готовых API.
 3. Для Level 1 не создавай отсутствующие роли Level 2.
-4. Для Level 2 сначала реализуй types, errors, behavior и factories `business`.
-5. Затем реализуй production adapters, assemblies и framework bindings, которые реально нужны задаче.
-6. Собери междоменный graph в composition, `app`, request handler или test setup.
+4. Для Level 2 сначала реализуй consumer types, `api/ports` при наличии dependency ports, errors, operations и `api/factory`.
+5. Затем реализуй production adapters, обязательную `assemblies/default`, дополнительные assemblies и framework bindings.
+6. В graph owner вызывай assembly builders пакетов Level 2 и явные construction points/public callbacks модулей Level 1, передавая им готовые cross-domain API.
 7. Переведи всех затронутых consumers на public paths.
-8. Обнови architecture mapping, metadata, package exports, environment declarations и business-safe allowlists, затронутые новой границей.
+8. Обнови architecture mapping, assembly contexts, package exports, environment declarations и API-safe allowlists, затронутые новой границей.
 9. Удали obsolete exports, deep imports и старые boundaries в согласованном scope.
-10. Добавь tests рядом с owners, включая cleanup failure paths для assemblies и одноразовых graph roots, создающих resources.
+10. Добавь tests рядом с owners, включая adapter contract tests, realtime guarantees и cleanup failure paths assemblies.
 11. Запусти доступные structural, type, unit, integration и architecture checks и убедись, что новые пути входят в анализ.
 
 Не оставляй заведомо промежуточную смешанную границу как завершённый результат. Backward compatibility добавляй только для реального внешнего consumer, persisted contract или явно согласованной phased migration.
@@ -437,11 +448,11 @@ Environment определяется transitive import graph, а не имене
 2. Найди все consumers, exports, state, I/O, framework integration и lifecycle resources.
 3. Вычисли dependency-connected migration radius до редактирования.
 4. Спроектируй Domain API по scenarios и consumers, а не по текущим technical segments.
-5. Перенеси модели, validation, transitions, outcomes и errors под authority `business`.
-6. Объяви явные factory dependencies и по одной factory на API.
-7. Оформи production technical implementations как adapter modules.
-8. Создай минимум одну assembly для реального execution context.
-9. Перенеси domain-specific framework responsibilities в Framework Group.
+5. Перенеси public models, validation, transitions, outcomes и errors под authority `api`.
+6. Объяви consumer-owned ports, closed port failures и по одной factory на Domain API.
+7. Оформи production implementations ports как adapter modules и добавь contract tests.
+8. Создай обязательную `assemblies/default` для baseline production context и дополнительные assemblies только при реальном отличии graph.
+9. Перенеси domain-specific state, cache, hydration и framework responsibilities в Framework Group.
 10. Оставь pages, routes и multi-domain UI в `compositions`.
 11. Переключи external consumers и graph roots.
 12. Обнови declarations формы домена, модулей, facets, environments и public entry points в project architecture mapping.
@@ -456,11 +467,12 @@ Environment определяется transitive import graph, а не имене
 2. Построй фактическую карту owners, public boundaries, imports и runtime injection.
 3. Проверь structural правила класса `A` по наблюдаемым evidence.
 4. Отдельно проверь смысловые правила класса `R`; отсутствие lint error не доказывает их соблюдение.
-5. Проверь transitive `business` closure, resolved external package entries и business-safe declarations.
-6. Проверь environment graph и полноту architecture mapping: неизвестные executable paths не должны выпадать из анализа.
-7. Проверь state/cache/error/lifecycle ownership, включая cleanup частично созданной assembly.
-8. Проверь, что tests находятся у правильных owners и не дублируют весь behavior на каждом уровне.
-9. Сначала сообщи findings по severity, затем краткий verdict и остаточные gaps.
+5. Проверь transitive `api` closure, resolved external package entries и API-safe declarations.
+6. Проверь importer matrix `api/ports`, `api/factory`, concrete adapters и assemblies.
+7. Проверь environment graph, resolver conditions и framework reference edges.
+8. Проверь state/cache/error/realtime/lifecycle ownership, включая cleanup частично созданной assembly.
+9. Проверь, что tests находятся у правильных owners и не дублируют весь behavior на каждом уровне.
+10. Сначала сообщи findings по severity, затем краткий verdict и остаточные gaps.
 
 Каждый finding содержит:
 
@@ -481,14 +493,14 @@ Confidence:
 
 | Ответственность | Основная test boundary |
 |---|---|
-| Domain scenarios, validation, state и expected errors | `business` через соответствующую factory |
-| Deterministic runtime/guards | `business` |
-| Technical mapping и provider behavior | Adapter module |
-| Graph composition, adapter selection, environment, success cleanup и partial-failure cleanup | Assembly module или одноразовый graph owner |
+| Domain scenarios, validation, models, outcomes и expected errors | `api` через соответствующую factory |
+| Deterministic runtime/guards | `api` |
+| Port mapping и provider behavior | Adapter module |
+| Graph composition, adapter selection, environment, success cleanup и partial-failure cleanup | Assembly module |
 | Provider, hook, form или query projection | Framework binding module |
 | Multi-domain graph и lifecycle | Composition, `app` или другой graph owner |
 
-Не повторяй полный business scenario suite в adapter, assembly и framework tests. Проверяй в каждой границе только принадлежащий ей behavior и integration contract.
+Не повторяй полный Domain API scenario suite в adapter, assembly и framework tests. Проверяй в каждой границе только принадлежащий ей behavior и integration contract.
 
 ## Anti-patterns
 
@@ -503,17 +515,18 @@ Confidence:
 
 ### Public boundaries
 
-- Deep imports во внутренности module или `business`.
+- Deep imports во внутренности module или `api`.
 - Root barrel доменного пакета или Group.
-- Reexport adapter implementation через `business`, package root или Domain API вместо public API самого adapter-модуля.
+- Reexport adapter implementation через `api`, package root или Domain API вместо public API самого adapter-модуля.
 - Reexport client и server entry points через общий barrel.
-- Создавать `business/runtime` без внешнего consumer.
+- Создавать `api/ports` без dependency port или `api/runtime` без внешнего consumer.
 
-### Business и runtime
+### Domain API и runtime
 
-- Импортировать SDK, storage, framework, state/query manager, platform API или hidden nondeterminism в `business`.
+- Импортировать SDK, storage, framework, state/query manager, platform API или hidden nondeterminism в `api`.
 - Обходить boundary через helper, `shared` или type alias.
 - Публиковать raw DTO или library-specific cache/store types в Domain API.
+- Экспортировать port contracts через consumer-facing `api` вместо `api/ports`.
 - Позволять adapter определять domain fallback, transition или error semantics.
 - Прятать production adapter inline в assembly/composition.
 - Позволять factory выбирать environment или assembly.
@@ -522,19 +535,23 @@ Confidence:
 
 - Добавлять scenario или API method в assembly.
 - Вызывать factory/assembly из framework binding.
+- Импортировать `api/factory` или concrete adapter из production graph owner в обход assembly.
 - При пересечении Level 2 package boundary импортировать framework state, hooks или components другого домена.
-- При пересечении Level 2 package boundary импортировать чужую factory, assembly, adapter или API singleton.
+- При пересечении Level 2 package boundary импортировать чужие ports, factory, assembly, adapter или API singleton.
 - Прятать runtime dependency в service locator, mutable registry или event bus.
 - Передавать production `infra` capability напрямую в Level 2 factory в обход обязательного adapter-модуля.
+- Считать `assemblies/default` изоморфной только из-за имени или runtime branch.
 
 ### State и lifecycle
 
 - Делать cache параллельной domain model.
-- Строить optimistic domain value из raw form/DTO без business validation.
+- Строить optimistic domain value из raw form/DTO без API validation.
 - Использовать file-level singleton без доказанного application scope.
 - Запускать скрытую subscription/timer при создании API.
 - Оставлять resource без scope или cleanup.
 - Возвращать пустой `dispose` только для одинаковой формы assemblies.
+- Вызывать callbacks после завершившегося cleanup.
+- Повторять realtime command без idempotency guarantee после `OUTCOME_UNKNOWN`.
 
 ### Процесс
 
@@ -569,7 +586,7 @@ Confidence:
 | Новая technical dependency | Ownership contract, timeout/retry/idempotency/order/subscription semantics |
 | Abort или cancellable operation | Кто владеет cancellation и как она связана с cleanup/outcome |
 | Публичные errors, RPC, server action | Expected failure, cancellation, unexpected defect и serialization policy |
-| Store, persistence или external events | Initial state, transitions, reset, persistence и owner |
+| Store, persistence или external events | Projection owner, API validation, hydration, resync и authoritative source |
 | Optimistic/concurrent mutations | Ordering, versioning, rollback/rebase и authoritative refresh |
 | Assembly, lazy graph или новый root | Scope, multiplicity, owned/borrowed resources и disposal |
 | SSR, hydration, RSC | Serialization boundary, validation/reset и executable/reference edges |
@@ -583,7 +600,7 @@ Confidence:
 ### До изменения файлов
 
 - [ ] Найден SLM root и path mapping.
-- [ ] Найдены architecture declarations, metadata и environment/business-safe allowlists проекта.
+- [ ] Найдены architecture declarations, assembly contexts, environment/API-safe allowlists проекта.
 - [ ] Прочитаны локальные инструкции.
 - [ ] Сформулирована responsibility.
 - [ ] Назначен один owner.
@@ -602,16 +619,18 @@ Confidence:
 - [ ] Нет deep imports и package/Group barrels.
 - [ ] Layer matrix соблюдена.
 - [ ] Общий module graph ацикличен.
-- [ ] `business` import closure environment-neutral и technical-runtime-free.
+- [ ] `api` import closure environment-neutral и technical-runtime-free.
 - [ ] Runtime APIs, пересекающие Level 2 package boundary, передаются аргументами; L1 -> L1 использует public API.
-- [ ] Новые external imports `business` доказанно business-safe и объявлены в allowlist.
+- [ ] Новые external imports `api` доказанно API-safe и объявлены в allowlist.
 - [ ] Client/server graphs не содержат несовместимый executable code.
-- [ ] Facets `business` имеют допустимое содержимое и consumers.
-- [ ] Production technical dependencies принадлежат нужным adapters.
-- [ ] Assembly или одноразовый graph owner возвращает точный graph и очищает owned resources после успеха и partial failure.
+- [ ] Обязательные и фактически существующие optional facets `api` имеют допустимое содержимое и consumers.
+- [ ] Production implementations ports принадлежат нужным adapters.
+- [ ] `assemblies/default` представляет объявленный baseline context и не имеет import side effects.
+- [ ] Assemblies возвращают точный graph и выполняют все owned и adapter-provided cleanup obligations после успеха и partial failure.
 - [ ] Framework bindings получают готовые APIs.
 - [ ] Все expected scenario failures имеют собственный stable domain error; technical и foreign errors не протекают наружу.
-- [ ] Cache не подменяет business authority.
+- [ ] Framework projection не подменяет authority `api`.
+- [ ] Realtime ports определяют correlation, ordering, resync, outcome uncertainty и cleanup.
 - [ ] Architecture mapping, exports, facets и environment declarations соответствуют новым путям.
 - [ ] Tests проверяют behavior соответствующих owners.
 - [ ] После migration удалена старая form/boundary.
@@ -636,10 +655,11 @@ Confidence:
 | Нужна точная формулировка правила | [`rules/level-1.md`](./reference/draft/rules/level-1.md), [`rules/level-2.md`](./reference/draft/rules/level-2.md) |
 | Неясен смысл сущности | [`level-1/terminology.md`](./reference/draft/level-1/terminology.md), [`level-2/terminology.md`](./reference/draft/level-2/terminology.md) |
 | Сложный Level 1 module/dependency/lifecycle case | [`level-1/`](./reference/draft/level-1/README.md) |
-| Package, business, factory или adapters | [`level-2/domains/`](./reference/draft/level-2/domains/README.md) |
+| Package, Domain API, ports, factory или adapters | [`level-2/domains/`](./reference/draft/level-2/domains/README.md) |
 | Cross-domain или environment edge | [`level-2/dependencies.md`](./reference/draft/level-2/dependencies.md) |
 | State, cache, SSR или hydration | [`state-cache.md`](./reference/draft/level-2/domains/state-cache.md), [`open-questions.md`](./reference/draft/level-2/domains/open-questions.md) |
 | Assembly lifecycle и cleanup | [`assemblies.md`](./reference/draft/level-2/domains/assemblies.md) |
+| Realtime messages и subscriptions | [`realtime.md`](./reference/draft/level-2/domains/realtime.md) |
 | Full architecture review | [`level-1/validation.md`](./reference/draft/level-1/validation.md), [`level-2/validation.md`](./reference/draft/level-2/validation.md) |
 | L1 -> L2 migration example | [`auth-example.md`](./reference/draft/level-2/domains/auth-example.md) |
 

@@ -1,114 +1,172 @@
-# Состояние и кэш
+# Состояние, cache и hydration
 
-> Пояснение границы между предметной властью business и техническими state/query runtimes.
+> Пояснение границы между семантической властью Domain API и framework-owned materialization.
 
 ## Связанные правила
 
-- [`SLM-L2-BUSINESS-R006`](../../rules/level-2.md#slm-l2-business-r006)
-- [`SLM-L2-BUSINESS-A007`](../../rules/level-2.md#slm-l2-business-a007)
+- [`SLM-L2-API-R006`](../../rules/level-2.md#slm-l2-api-r006)
+- [`SLM-L2-API-A007`](../../rules/level-2.md#slm-l2-api-a007)
 - [`SLM-L2-DEPENDENCY-A012`](../../rules/level-2.md#slm-l2-dependency-a012)
 - [`SLM-L2-FRAMEWORK-R015`](../../rules/level-2.md#slm-l2-framework-r015)
-- [`SLM-L2-BUSINESS-R018`](../../rules/level-2.md#slm-l2-business-r018)
+- [`SLM-L2-API-R018`](../../rules/level-2.md#slm-l2-api-r018)
+- [`SLM-L2-STATE-R028`](../../rules/level-2.md#slm-l2-state-r028)
 
-## Библиотеки не запрещены
+## Основная граница
 
-Запрет state/query manager в import-графе `business` не запрещает TanStack Query, SWR, Apollo, RTK Query, Zustand, Redux, MobX или RxJS в доменном пакете. Он запрещает concrete runtime становиться предметным контрактом.
+Модуль `api` определяет форму и семантику доменных значений, но не выбирает способ их хранения и реактивной доставки. TanStack Query, SWR, Apollo, RTK Query, Zustand, Redux, MobX, Pinia, Signals и RxJS остаются в framework bindings или compositions.
 
-Такая библиотека может находиться:
-
-- в adapter-модуле, если реализует техническую зависимость business-фабрики;
-- в framework binding module, если доставляет готовый Domain API конкретному framework;
-- в composition, если состояние принадлежит только её UI scope и не подменяет доменную модель.
-
-## Три вида состояния
-
-### Предметное состояние
-
-Модель фактов и переходов домена. `business` определяет initial value, validation, допустимые команды, transitions и selectors. Concrete store может быть передан фабрике как business-owned port:
-
-```ts
-export type AuthStateDependency = {
-  create: (initial: AuthState) => {
-    get: () => AuthState
-    set: (state: AuthState) => void
-    subscribe: (listener: () => void) => () => void
-  }
-}
+```text
+Domain API
+  → public model/outcome/event
+  → framework projection
+  → rendering
 ```
 
-Adapter поверх Zustand или другого manager реализует этот контракт, но не выбирает initial state и не добавляет переходы.
+Concrete state/query runtime не импортируется модулем `api`, не является dependency port фабрики и не входит в публичный Domain API.
 
-### Technical source cache
+## Виды materialization
 
-Кэш SDK, HTTP, GraphQL или storage-вызовов. Adapter может использовать QueryClient, Apollo cache или иной runtime для deduplication, transport retry и хранения внешних результатов. Business по-прежнему проверяет и преобразует результат до публикации предметной модели.
+### Source cache
 
-Query keys и библиотечные result types остаются внутри adapter. Domain API не экспортирует `UseQueryResult`, `ApolloError`, raw DTO или mutable QueryClient.
+Технический cache внешнего provider внутри adapter. Он может отвечать за transport deduplication, connection state, provider retry и хранение port records.
 
-Если technical cache создаёт timers, subscriptions или другой lifecycle-ресурс для всего графа, владеющая им assembly передаёт cleanup graph owner. Cache без такого ресурса не требует искусственного `dispose`.
+Source cache не публикует raw DTO, query keys, mutable client или library result через Domain API. Если adapter создаёт timers, subscriptions или connection, он остаётся единственным владельцем и экспортирует lifecycle handle, который assembly только агрегирует. Если resource создаёт assembly, adapter использует его как borrowed capability и не закрывает самостоятельно.
 
-### Framework projection cache
+### Framework projection
 
-Кэш, который framework binding строит поверх вызовов готового Domain API для rendering, Suspense, revalidation или UI coordination.
+State или cache, который framework binding строит из готового Domain API:
 
 ```ts
-const useProfile = () => {
-  const api = useUserApi()
+export const useAuthSession = () => {
+  const api = useAuthApi()
 
   return useQuery({
-    queryKey: ['user', 'profile'],
-    queryFn: api.getProfile,
+    queryKey: ['auth', 'session'],
+    queryFn: api.getSession,
   })
 }
 ```
 
-Такой cache не является параллельным предметным источником, пока его значения происходят из Domain API и все предметные изменения выполняются через API.
+Query key, stale time, pending/retry status, Suspense, rendering stale data и техническая invalidation принадлежат binding. `AuthSession` и `AuthError` принадлежат `api`.
+
+### Composition state
+
+Состояние конкретной страницы или multi-domain flow принадлежит composition: выбранная вкладка, открытый modal, draft формы, route transition и координация нескольких API.
+
+Если draft приобретает самостоятельную доменную семантику, Domain API предоставляет validation или transition, но framework по-прежнему хранит возвращаемое readonly value.
+
+## Domain API не является store
+
+Публичный Domain API не экспортирует:
+
+- mutable store;
+- `getState` и `setState` framework runtime;
+- QueryClient;
+- Zustand `StoreApi`;
+- framework hook;
+- глобальный singleton данных;
+- универсальный state port.
+
+API methods возвращают значения и outcomes. Framework consumer решает, как долго их хранить и когда повторно запросить.
+
+Это не означает, что framework определяет предметные transitions. Он материализует только то, что произвёл или проверил API.
 
 ## Invalidation и retry
 
-Не каждая cache policy является бизнес-правилом.
-
 | Политика | Обычный владелец |
 |---|---|
-| Query key, stale time, deduplication, background refetch | Adapter или framework binding |
-| Rendering stale data, Suspense, polling UI | Framework binding или composition |
+| Query key, stale time, deduplication, background refetch | Framework binding |
 | Transport retry безопасного запроса | Adapter |
-| Запрет повторной предметной команды | `business` |
-| Cooldown, лимит попыток, допустимый transition | `business` |
-| Freshness, влияющая на корректность сценария | `business` через явный контракт |
+| Rendering stale data, Suspense, polling UI | Framework binding или composition |
+| Запрет повторной предметной команды | Domain API |
+| Cooldown, лимит попыток, допустимый transition | Domain API |
+| Freshness, влияющая на корректность сценария | Domain API через operation contract |
 
-Если после команды требуется invalidation, framework binding может связать успешный результат API с техническими keys. Если выбор invalidation выражает предметную семантику, business возвращает устойчивый outcome/event либо публикует чистое правило через `business/runtime`; binding только отображает его на библиотечные операции.
+После успешной команды binding может технически invalidировать известные query keys. Если выбор invalidation выражает предметную семантику, Domain API возвращает устойчивый outcome/event, а binding только отображает его на framework cache.
 
 ## Optimistic updates
 
-Framework binding не конструирует произвольную предметную модель из input формы или transport DTO. Optimistic update допустим, когда предполагаемое значение:
+Framework binding не конструирует произвольную публичную модель из form input, raw DTO или текущего cache. Optimistic projection допустима, когда предполагаемое значение:
 
-- возвращено командой Domain API как безопасная projection;
-- создано отдельным pure-методом Domain API;
-- создано или проверено публичной функцией `business/runtime`.
+- возвращено командой Domain API;
+- создано отдельной операцией Domain API;
+- создано или проверено pure-функцией `api/runtime`.
 
 ```ts
-const optimisticProfile = projectProfileUpdate(currentProfile, command)
+import {
+  projectProfileUpdate,
+} from '@/domains/user/api/runtime'
+
+const optimisticProfile = projectProfileUpdate(
+  currentProfile,
+  command,
+)
 
 queryClient.setQueryData(profileKey, optimisticProfile)
 ```
 
-Здесь `projectProfileUpdate` принадлежит `business/runtime`, а `setQueryData` остаётся технической операцией framework binding.
+`projectProfileUpdate` владеет предметным transition, а `setQueryData` остаётся framework operation.
 
-Запись raw form data или DTO напрямую в публичный product cache обходит предметного владельца и нарушает границу.
+## Concurrent mutations и realtime
 
-## Browser, SSR и RSC
+При нескольких optimistic commands и realtime events binding не выбирает самостоятельно ordering, versioning, rollback или rebase. Domain API возвращает correlation/version metadata либо предоставляет deterministic reconciliation:
 
-Client hook, server prefetch и hydrate/dehydrate могут принадлежать разным framework binding modules с совместимыми environment entry points. Общая framework-specific cache policy выносится в отдельный модуль той же Framework Group, если у неё несколько реальных потребителей.
+```ts
+const nextProjection = reconcileProfile({
+  current,
+  event,
+  pendingCommands,
+})
+```
 
-`compositions` вызывает публичный server binding для prefetch и публичный client binding для rendering. Она не повторяет query keys и mapping доменных результатов.
+Если API не объявляет безопасный merge, binding invalidates cache и получает authoritative snapshot через Domain API. Это предпочтительнее скрытого применения неполного delta.
+
+## Persistence
+
+Framework cache может технически сохраняться между reloads, но persisted value не становится источником предметной истины. После восстановления значение:
+
+- используется как stale projection до revalidation;
+- либо проверяется публичным validator `api/runtime`;
+- либо отбрасывается и загружается через Domain API.
+
+Если storage является самостоятельным предметным внешним источником, доступ к нему оформляется dependency port и adapter. Автоматический framework middleware не обходит API validation и transitions.
+
+## SSR и hydration
+
+Server и client имеют разные API instances и caches:
+
+```text
+server request
+  → request assembly
+  → server Domain API
+  → server framework cache
+  → serializable hydration payload
+
+browser
+  → client assembly
+  → client Domain API
+  → hydrated client cache
+```
+
+Hydration payload принадлежит framework binding и содержит только public domain values и framework metadata. API object, functions, ports, adapters, mutable clients и request secrets не сериализуются.
+
+Server cache создаётся на каждый request и не хранится в module singleton. Client cache создаётся на согласованный application или route scope.
+
+## RSC и Server Actions
+
+Server Component вызывает server Domain API и передаёт Client Component только сериализуемые values или hydration payload. Client Component создаёт или получает отдельный client API instance; при SSR его render отдельно проверяется в server prerender graph до browser hydration.
+
+Server Action создаёт request-scoped production graph на каждый вызов, выполняет Domain API command и гарантированно выполняет все cleanup obligations графа. Client invocation Server Action является framework reference edge, а не передачей server API в browser.
 
 ## Проверка на ревью
 
 Для каждого state/query runtime определяется:
 
-- является ли он adapter, framework projection или локальным UI state;
-- откуда поступают значения;
-- кто определяет transition и optimistic projection;
+- является ли он source cache, framework projection или composition state;
+- откуда поступают public domain values;
+- кто определяет validation и transition;
 - где находятся library-specific types и keys;
-- как invalidation соотносится с результатами Domain API;
-- соответствует ли cache lifecycle области жизни API и framework scope.
+- как invalidation связана с Domain API outcomes;
+- как обрабатываются optimistic concurrency и realtime events;
+- что сериализуется при SSR/RSC;
+- соответствует ли cache scope области жизни API graph.

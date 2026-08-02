@@ -1,158 +1,235 @@
-# Фабрики, зависимости и adapters
+# Фабрики, ports и adapters
 
-> Пояснение границы между `business` и технической средой.
+> Пояснение dependency inversion между Domain API и внешними runtime-возможностями.
 
 ## Связанные правила
 
-- [`SLM-L2-BUSINESS-A007`](../../rules/level-2.md#slm-l2-business-a007)
+- [`SLM-L2-API-A007`](../../rules/level-2.md#slm-l2-api-a007)
 - [`SLM-L2-FACTORY-R008`](../../rules/level-2.md#slm-l2-factory-r008)
 - [`SLM-L2-ERROR-R010`](../../rules/level-2.md#slm-l2-error-r010)
 - [`SLM-L2-DEPENDENCY-A012`](../../rules/level-2.md#slm-l2-dependency-a012)
-- [`SLM-L2-BUSINESS-R018`](../../rules/level-2.md#slm-l2-business-r018)
-- [`SLM-L2-BUSINESS-A019`](../../rules/level-2.md#slm-l2-business-a019)
+- [`SLM-L2-API-R018`](../../rules/level-2.md#slm-l2-api-r018)
+- [`SLM-L2-API-A019`](../../rules/level-2.md#slm-l2-api-a019)
 - [`SLM-L2-ADAPTER-R021`](../../rules/level-2.md#slm-l2-adapter-r021)
-- [`SLM-L2-BUSINESS-A022`](../../rules/level-2.md#slm-l2-business-a022)
-- [`SLM-L2-BUSINESS-R024`](../../rules/level-2.md#slm-l2-business-r024)
+- [`SLM-L2-API-A022`](../../rules/level-2.md#slm-l2-api-a022)
+- [`SLM-L2-API-R024`](../../rules/level-2.md#slm-l2-api-r024)
+- [`SLM-L2-PORT-R027`](../../rules/level-2.md#slm-l2-port-r027)
 
-## Одна фабрика на API
+## Одна фабрика на Domain API
 
 ```text
-явные зависимости + business factory → один Domain API
+явные ports + cross-domain APIs + factory → один Domain API
 ```
 
-Модуль `business` предоставляет одну именованную фабрику для каждого объявленного API. Фабрики экспортируются через общий runtime-фасет `business/factory`:
+Модуль `api` предоставляет одну именованную фабрику для каждого объявленного Domain API:
 
 ```ts
 import type {
-  AuthAdministrationApi,
-  AuthAdministrationDeps,
   AuthSessionApi,
-  AuthSessionDeps,
-} from '@/domains/auth/business'
+} from '@/domains/auth/api'
 
-export type AuthSessionFactory = (
-  deps: AuthSessionDeps,
+import type {
+  AuthIdentityPort,
+  AuthRuntimePort,
+} from '@/domains/auth/api/ports'
+
+export type AuthSessionApiDependencies = Readonly<{
+  identity: AuthIdentityPort
+  runtime: AuthRuntimePort
+}>
+
+export type AuthSessionApiFactory = (
+  dependencies: AuthSessionApiDependencies,
 ) => AuthSessionApi
-
-export type AuthAdministrationFactory = (
-  deps: AuthAdministrationDeps,
-) => AuthAdministrationApi
 ```
 
 ```ts
 import {
-  authAdministrationFactory,
-  authSessionFactory,
-} from '@/domains/auth/business/factory'
+  createAuthSessionApi,
+} from '@/domains/auth/api/factory'
 ```
 
-Фабрика не выбирает environment, assembly или конкретную production-реализацию зависимости. Разные API могут иметь разные наборы deps и собираться независимо.
+Фабрика не выбирает environment, provider, adapter или assembly. Она не открывает connection, не запускает subscription и не создаёт framework state. Разные Domain API могут иметь разные dependency sets и собираться независимо.
 
-## Технические зависимости
+## Consumer-owned ports
 
-Зависимости фабрики описывают возможности, необходимые business-сценариям. Они не раскрывают конкретный SDK, framework hook, generated operation или объект платформы.
+Port описывает capability с позиции модуля `api`, а не повторяет конкретный provider:
 
 ```ts
-export type AuthPhoneDependency = {
-  requestCode: (phone: string) => Promise<unknown>
-  verifyCode: (code: string) => Promise<unknown>
+export type AuthIdentityRecord = Readonly<{
+  expiresAt: number
+  subject: string
+}>
+
+export type AuthIdentityPortFailure =
+  | Readonly<{ type: 'FORBIDDEN' }>
+  | Readonly<{ type: 'RATE_LIMITED' }>
+  | Readonly<{ type: 'UNAVAILABLE' }>
+
+export type AuthIdentityPortResult =
+  | Readonly<{
+      ok: true
+      value: AuthIdentityRecord
+    }>
+  | Readonly<{
+      ok: false
+      failure: AuthIdentityPortFailure
+    }>
+
+export type AuthIdentityPort = {
+  signIn: (
+    command: AuthIdentityPortCommand,
+  ) => Promise<AuthIdentityPortResult>
 }
 ```
 
-`unknown` допустим на границе непроверенного внешнего результата. `business` проверяет его до превращения в предметные данные или состояние.
+Port не экспортирует generated DTO, SDK error class, HTTP status или concrete client. `AuthIdentityRecord` не становится `AuthSession`: модуль `api` проверяет record и создаёт публичную модель.
 
-Техническими зависимостями также являются:
+Не каждый port обязан использовать `Result`. Exception, callback или async iterable допустимы при project policy, если expected failures, cancellation, outcome uncertainty и cleanup остаются типизированными и проверяемыми.
 
-- concrete state/query runtime;
-- subscription и event source;
-- browser, Node.js и framework capabilities;
-- request data и abort signal;
-- текущее время и timer;
-- random и ID generator;
-- environment и runtime configuration provider.
+## Гранулярность ports
 
-```ts
-export type VerificationDeps = {
-  clock: { now: () => number }
-  ids: { create: () => string }
-  timer: { delay: (ms: number) => Promise<void> }
-}
+Port соответствует связной capability, а не каждому endpoint и не всему SDK:
+
+```text
+AuthIdentityPort
+  ├── requestCode
+  ├── verifyCode
+  └── revokeSession
 ```
 
-`Date.now()`, `new Date()` без аргумента, `Math.random()`, `crypto.randomUUID()`, скрытый env и глобальный timer не читаются напрямую business-кодом, если влияют на поведение сценария. Детерминированная арифметика над переданным timestamp остаётся business-safe.
+Допустимо разделить capability, если операции имеют разные trust boundaries, lifecycle или providers. Запрещено создавать десятки pass-through ports только ради зеркала transport operations.
 
-Cancellation также описывается business-owned контрактом. Concrete `AbortSignal` или другой platform type остаётся внутри adapter, пока не принят отдельный общий публичный контракт.
+Clock, timer, random, ID generator и environment также являются ports, если влияют на результат Domain API. Materialized framework state и query cache ports не являются: они принадлежат framework binding.
 
-Термин и обязательная поведенческая форма технического порта пока не закреплены. В частности, позднее нужно определить cancellation, timeout, retry, concurrency и subscription semantics.
+## Failure algebra
 
-## Cross-domain API dependency
+Expected failure проходит две явные стадии:
 
-Готовый API другого домена не считается техническим adapter-портом. Это отдельная cross-domain API dependency, выраженная type-only контрактом:
-
-```ts
-import type { AuthSessionApi } from '@/domains/auth/business'
-
-export type UserDeps = {
-  auth: Pick<AuthSessionApi, 'getSnapshot'>
-}
+```text
+provider-specific failure
+  → adapter mapping
+  → closed port failure
+  → api mapping
+  → stable domain error or outcome
 ```
 
-Runtime-значение место сборки графа передаёт через assembly либо напрямую зависимой business-фабрике. `user/business` не импортирует executable factory, assembly или instance Auth.
+Port failure должен сохранять различия, которые нужны Domain API. Если adapter сводит `FORBIDDEN`, `CONFLICT` и `UNAVAILABLE` к `unknown`, API не может выбрать корректную публичную семантику. Если adapter передаёт HTTP status или SDK error, concrete provider протекает внутрь API.
 
-Если exception-модели нужен runtime guard чужой ожидаемой ошибки, зависимый business может импортировать его из детерминированного `auth/business/runtime`. Этот импорт остаётся обычным ребром DAG.
+Unexpected exception не обязана превращаться в expected failure. Cancellation объявляется отдельно от failure, если caller управляет ею. Disconnect или timeout после отправки неидемпотентной команды может означать `OUTCOME_UNKNOWN`, а не доказанный отказ.
 
 ## Adapter module
 
-Adapter module соединяет явную техническую зависимость фабрики с конкретной системой:
+Adapter соединяет port с concrete provider:
 
 ```text
-business dependency ← adapter → SDK / query runtime / platform / request data
+api-owned port ← adapter → SDK / REST / storage / platform / realtime
 ```
-
-Adapter преобразует аргументы и технический результат к контракту зависимости. Он не определяет публичный метод Domain API, предметный fallback или код доменной ошибки.
-
-Ожидаемый исходный сбой возвращается `business`, который выбирает собственный error code. Поэтому приложение не строит поведение по HTTP status, SDK error class или storage exception.
-
-Adapter может использовать TanStack Query, Apollo, Zustand или другой state/query runtime, если реализует business-owned dependency. Library types, query keys и mutable clients не протекают в public types `business`.
-
-## Размещение adapters
-
-Каждая связная production-реализация является отдельным SLM-модулем в Group `adapters`:
-
-```text
-auth/adapters/
-├── phone-http/
-│   └── index.ts
-├── browser-session/
-│   └── index.ts
-└── browser-runtime/
-    └── index.ts
-```
-
-Один adapter-модуль может реализовать несколько тесно связанных зависимостей одного technical provider. Например, `browser-runtime` может предоставить clock, timer и ID generator. Правило не требует отдельного модуля для каждого метода deps.
-
-Adapter module имеет собственные ответственность, публичный API, environment label и тестовую границу. Group `adapters` не имеет `index.ts` и не реэкспортирует дочерние модули.
-
-Production adapter запрещено определять:
-
-- закрытым сегментом assembly;
-- inline-функцией в `composition` или `app`;
-- частью framework binding module;
-- скрытой реализацией внутри `business`.
-
-Assembly и одноразовое место сборки импортируют конкретные adapter-модули через их публичные API:
 
 ```ts
-import { authSessionFactory } from '@/domains/auth/business/factory'
-import { createPhoneHttpAdapter } from '@/domains/auth/adapters/phone-http'
-import { createBrowserRuntimeAdapter } from '@/domains/auth/adapters/browser-runtime'
+import type {
+  AuthIdentityPort,
+} from '@/domains/auth/api/ports'
 
-const session = authSessionFactory({
-  phone: createPhoneHttpAdapter(),
-  runtime: createBrowserRuntimeAdapter(),
+export const createAuthRestAdapter = (
+  client: IdentityClient,
+): AuthIdentityPort => ({
+  async signIn(command) {
+    try {
+      const response = await client.signIn({
+        login: command.identifier,
+        password: command.secret,
+      })
+
+      return {
+        ok: true,
+        value: {
+          expiresAt: response.expires_at,
+          subject: response.user_id,
+        },
+      }
+    } catch (error) {
+      return mapIdentityProviderFailure(error)
+    }
+  },
 })
 ```
 
-Если ни одна фабрика не имеет технических зависимостей, Group `adapters` не обязательна. Cross-domain API dependency не считается adapter и передаётся отдельно.
+Adapter преобразует protocol arguments, records и expected failures, но не решает, какой `AuthError` получит приложение, не добавляет предметный fallback и не объявляет метод Domain API.
 
-Локальные fake implementations в business-тестах не являются production adapters и не требуют SLM-модулей. Они существуют только внутри тестовой границы и не экспортируются в рабочий код.
+## Размещение adapters
+
+Каждая связная production-реализация является отдельным SLM-модулем Group `adapters`:
+
+```text
+auth/adapters/
+├── identity-rest/
+│   └── index.ts
+├── identity-realtime/
+│   └── index.ts
+└── session-cookie/
+    └── index.ts
+```
+
+Один adapter-модуль может реализовать несколько тесно связанных ports одного provider. Group `adapters` не имеет `index.ts` и не реэкспортирует дочерние модули.
+
+Production adapter запрещено определять:
+
+- внутри `api`;
+- закрытым сегментом assembly;
+- inline-функцией в `app` или composition;
+- частью framework binding;
+- mutable registry или service locator.
+
+Concrete adapters в production импортируют только assemblies своего домена. Adapter tests импортируют соответствующий module напрямую.
+
+## Универсальный infra service
+
+Adapter может использовать публичный API `infra`, если concrete technical service является универсальным для приложения:
+
+```text
+auth adapter
+  → infra/http-client
+  → external identity provider
+```
+
+Совпадение сигнатур `infra` API и port не переносит ownership port в `infra`. Adapter остаётся явной границей provider mapping, failures и environment. Он может быть тонким, но не добавляет фиктивные преобразования ради объёма кода.
+
+## Cross-domain API dependency
+
+Готовый API другого домена не является technical port:
+
+```ts
+import type {
+  AuthSessionApi,
+} from '@/domains/auth/api'
+
+export type UserProfileApiDependencies = Readonly<{
+  auth: Pick<AuthSessionApi, 'getSession'>
+  profile: UserProfilePort
+}>
+```
+
+Graph owner создаёт Auth раньше User и передаёт `auth.session` в User assembly. User не объявляет structural copy чужого API и не создаёт bridge adapter без реального преобразования контракта.
+
+Если expected Auth failure становится публичным outcome User, User API преобразует его в собственную `UserError`. При exception-модели он может использовать публичный guard из `auth/api/runtime`.
+
+## Framework-only SDK
+
+Некоторые SDK доступны только как framework Provider, hook или component, например CAPTCHA или payment element. Framework binding может получить opaque token или operation input через такой SDK и передать его команде Domain API:
+
+```text
+framework SDK
+  → opaque token
+  → Domain API command
+  → port
+  → provider adapter
+```
+
+Binding не вызывает предметную provider operation напрямую, SDK type не входит в public Domain API, а generic technical UI при необходимости разделяется между `infra`, `ui` и composition.
+
+## Tests и fake ports
+
+Локальные fake implementations в API-тестах не являются production adapters и не требуют SLM-модулей. Они существуют только внутри test boundary и позволяют детерминированно задавать records, failures, cancellation и realtime события.
+
+Adapter contract tests отдельно доказывают, что concrete provider действительно реализует port. API-тест с идеальным fake не заменяет эту проверку.

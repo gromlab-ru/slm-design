@@ -1,15 +1,16 @@
 # Framework Groups и модули
 
-> Пояснение domain-specific framework-кода на примере React.
+> Пояснение domain-specific framework-кода, materialized state и RSC boundaries на примере React.
 
 ## Связанные правила
 
-- [`SLM-L2-BUSINESS-R006`](../../rules/level-2.md#slm-l2-business-r006)
+- [`SLM-L2-API-R006`](../../rules/level-2.md#slm-l2-api-r006)
 - [`SLM-L2-DEPENDENCY-A012`](../../rules/level-2.md#slm-l2-dependency-a012)
 - [`SLM-L2-FRAMEWORK-R014`](../../rules/level-2.md#slm-l2-framework-r014)
 - [`SLM-L2-FRAMEWORK-R015`](../../rules/level-2.md#slm-l2-framework-r015)
-- [`SLM-L2-BUSINESS-A019`](../../rules/level-2.md#slm-l2-business-a019)
-- [`SLM-L2-BUSINESS-A022`](../../rules/level-2.md#slm-l2-business-a022)
+- [`SLM-L2-API-A019`](../../rules/level-2.md#slm-l2-api-a019)
+- [`SLM-L2-API-A022`](../../rules/level-2.md#slm-l2-api-a022)
+- [`SLM-L2-STATE-R028`](../../rules/level-2.md#slm-l2-state-r028)
 
 ## Framework Group
 
@@ -28,44 +29,44 @@ domains/auth/react/            # Framework Group
     └── index.ts
 ```
 
-`react` является Group, а не модулем. У неё нет `index.ts`, состояния, реализации, lifecycle или агрегирующего API. Если пакет поддерживает Vue, рядом появляется отдельная Group `vue`.
+`react` является Group, а не модулем. У неё нет `index.ts`, реализации, state, lifecycle или агрегирующего API. Если пакет поддерживает Vue, рядом появляется отдельная Group `vue`.
 
-Каждый прямой дочерний каталог является обычным SLM-модулем со своей ответственностью, публичным API и узлом графа. Он не является вложенным модулем, потому что родительская граница `react` является Group.
+Каждый прямой дочерний каталог является обычным SLM-модулем со своей ответственностью, публичным API и узлом графа.
 
 ## Framework binding module
 
-Модуль принадлежит Framework Group, если его самостоятельная ответственность состоит в связывании одного или нескольких готовых Domain API своего домена с конкретным framework. Сам факт зависимости от framework недостаточен: framework-specific assembly остаётся в `assemblies`, а page-specific модуль остаётся в `compositions`.
+Модуль принадлежит Framework Group, если его самостоятельная ответственность состоит в связывании готового Domain API своего домена с конкретным framework.
 
-Framework binding module может:
+Framework binding может:
 
-- передавать готовые API через Provider и context;
+- передавать готовый API через Provider и context;
 - предоставлять domain-specific hooks;
-- отображать состояние и безопасные ошибки домена;
-- использовать framework-compatible state/query runtime;
+- хранить framework projection в query cache или store;
+- отображать public models, outcomes и domain errors;
+- реализовывать SSR prefetch и client hydration;
 - реализовывать переиспользуемую domain-specific форму или guard;
-- связывать framework lifecycle с явными операциями Domain API.
+- связывать framework lifecycle с явной realtime subscription.
 
-Он не вызывает business-фабрику или assembly, не выбирает adapters и не создаёт новые предметные сценарии.
+Он не вызывает `api/factory` или assembly, не выбирает adapters, не импортирует SDK предметного external source и не определяет новые предметные операции.
 
-Framework binding импортирует типы и deterministic runtime через разные фасеты:
+Framework binding импортирует consumer types и deterministic runtime через разные фасеты:
 
 ```ts
 import type {
   AuthError,
   AuthSessionApi,
-} from '@/domains/auth/business'
+} from '@/domains/auth/api'
 
 import {
-  AUTH_ERROR_CODES,
   isAuthError,
-} from '@/domains/auth/business/runtime'
+} from '@/domains/auth/api/runtime'
 ```
 
-Импорт `business/factory` запрещён: готовые API передаются модулю извне.
+Импорты `api/ports`, `api/factory` и `adapters/*` запрещены.
 
-## Модуль session
+## Готовый API
 
-`auth/react/session` может владеть Provider и hooks доступа к уже созданному `AuthSessionApi`:
+`auth/react/session` может владеть Provider для уже созданного `AuthSessionApi`:
 
 ```tsx
 'use client'
@@ -91,66 +92,120 @@ export const AuthSessionProvider = ({
 ```ts
 import {
   AuthSessionProvider,
-  useAuthSession,
+  useAuthApi,
 } from '@/domains/auth/react/session'
 ```
 
 Импорт `@/domains/auth/react` запрещён, потому что Group не имеет API.
 
-## State/query runtime
+## Query и store projection
 
-`auth/react/queries` может использовать TanStack Query, SWR или другой React runtime поверх готового `AuthSessionApi`. Query cache остаётся framework projection, пока данные и transitions проходят через API, а optimistic values создаются или проверяются business-владельцем.
+`auth/react/queries` может использовать TanStack Query, SWR, Zustand или другой React runtime поверх готового API:
 
 ```ts
 export const useAuthSessionQuery = () => {
-  const api = useAuthSession()
+  const api = useAuthApi()
 
   return useQuery({
     queryKey: ['auth', 'session'],
-    queryFn: api.getCurrentSession,
+    queryFn: api.getSession,
   })
 }
 ```
 
-Server prefetch и client hook могут быть разными модулями Framework Group с совместимыми environment markers. Общая query policy выносится в отдельный framework-модуль при наличии нескольких потребителей, а не дублируется в compositions.
+Query keys, stale time, pending status и hydration принадлежат binding. Значения и ошибки поступают через Domain API. Framework types не становятся частью `AuthSessionApi`.
 
-Подробности описаны в [Состоянии и кэше](./state-cache.md).
+Framework projection не импортируется другим доменом. Cross-domain UI собирается в `compositions`.
 
-## Модуль login-form
+## Realtime binding
 
-`auth/react/login-form` может владеть переиспользуемой формой, если она работает только с Auth API, состоянием и ошибками своего домена. Она может использовать публичный API соседнего `auth/react/session`, если зависимость остаётся ацикличной.
+Binding может запускать subscription готового API в framework lifecycle:
 
-Конкретная страница, продуктовый текст, layout, redirect и выбор маршрута принадлежат `compositions`. Domain-owned guard может решить, разрешено ли действие, но политика перехода на `/login` остаётся у route composition.
+```text
+component/provider scope
+  → Domain API subscribe
+  → verified domain events
+  → query invalidation or API-owned projection
+  → cleanup on scope end
+```
+
+Binding не импортирует WebSocket client и не разбирает frames. После cleanup он не принимает late callbacks. Если reconnect создаёт gap, binding обрабатывает публичный `RESYNC_REQUIRED` outcome и повторно загружает snapshot через Domain API.
+
+## Domain-specific UI
+
+`auth/react/login-form` может владеть переиспользуемой формой, если она работает только с Auth API, public models и errors своего домена. Она может использовать публичный API соседнего `auth/react/session`, если статический граф остаётся ацикличным.
+
+Конкретная страница, продуктовый текст, layout, redirect и выбор маршрута принадлежат `compositions`. Domain API может вернуть `AUTH_REQUIRED`, но переход на `/login` выбирает composition.
+
+## Framework-only SDK
+
+SDK, доступный только через Provider, hook или component, может использоваться binding для получения opaque operation input:
+
+```text
+CAPTCHA React component
+  → opaque token
+  → AuthApi command
+```
+
+Binding не использует SDK для самостоятельной предметной операции, не превращает SDK response в public domain model и не экспортирует SDK type через Domain API. Если SDK предоставляет reusable technical UI без предметной модели, его generic integration может принадлежать `infra` и `ui`, а composition связывает её с доменом.
 
 ## Запрет cross-domain framework imports
 
-Framework binding module не импортирует hooks, contexts, Providers, components или framework state другого домена:
+Framework binding module не импортирует hooks, contexts, Providers, stores или components другого домена:
 
 ```ts
 // Недопустимо: domains/user/react/profile
-import { useAuthSession } from '@/domains/auth/react/session'
+import {
+  useAuthSessionQuery,
+} from '@/domains/auth/react/queries'
 ```
 
 Cross-domain UI собирается в `compositions`:
 
 ```tsx
-const session = useAuthSession()
+const session = useAuthSessionQuery()
 
 return (
   <UserProfile
-    userId={session.userId}
-    canEdit={session.isAuthenticated}
+    userId={session.data?.userId}
   />
 )
 ```
 
-Передача через props является границей композиции, но не требует prop drilling внутри домена: каждый пакет может использовать собственный Provider и context. Если User business постоянно нуждается в Auth, готовый `AuthSessionApi` передаётся User factory при сборке графа, а User framework module работает уже со своим API.
+Если User Domain API постоянно нуждается в Auth, готовый `AuthSessionApi` передаётся User assembly при сборке runtime-графа. User framework binding работает уже со своим API.
+
+## SSR, RSC и client boundary
+
+Server prefetch и client hooks могут принадлежать разным modules Framework Group с совместимыми entry points. Они не разделяют API instance или mutable cache:
+
+```text
+server binding
+  → server API instance
+  → prefetch
+  → hydration payload
+
+client binding
+  → client API instance
+  → hydrate
+  → rendering
+```
+
+Server Component не передаёт API object в Client Component. Client reference и Server Action reference объявляются checker-у отдельно от executable imports. Если Client Component участвует в SSR или prerender, его server render graph проверяется отдельно от browser hydration graph; browser-only capability используется только через объявленную framework-deferred boundary.
 
 ## Публичные API
 
 ```ts
-import { AuthSessionProvider } from '@/domains/auth/react/session'
-import { LoginForm } from '@/domains/auth/react/login-form'
+import {
+  AuthSessionProvider,
+} from '@/domains/auth/react/session'
+
+import {
+  useAuthSessionQuery,
+} from '@/domains/auth/react/queries'
+
+import {
+  LoginForm,
+} from '@/domains/auth/react/login-form'
 ```
 
 Framework Group не реэкспортирует дочерние модули. Это сохраняет независимые ответственности и не превращает `react` в скрытый корневой модуль домена.

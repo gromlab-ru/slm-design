@@ -1,6 +1,6 @@
-# Assemblies и среды выполнения
+# Assemblies и production-граф
 
-> Пояснение повторяемой сборки именованного графа Domain API.
+> Пояснение обязательной штатной сборки, дополнительных контекстов, environment compatibility и lifecycle.
 
 ## Связанные правила
 
@@ -8,163 +8,257 @@
 - [`SLM-L2-ASSEMBLY-R011`](../../rules/level-2.md#slm-l2-assembly-r011)
 - [`SLM-L2-DEPENDENCY-A012`](../../rules/level-2.md#slm-l2-dependency-a012)
 - [`SLM-L2-ENVIRONMENT-A013`](../../rules/level-2.md#slm-l2-environment-a013)
-- [`SLM-L2-BUSINESS-A019`](../../rules/level-2.md#slm-l2-business-a019)
+- [`SLM-L2-API-A019`](../../rules/level-2.md#slm-l2-api-a019)
 - [`SLM-L2-ASSEMBLY-A020`](../../rules/level-2.md#slm-l2-assembly-a020)
 - [`SLM-L2-ADAPTER-R021`](../../rules/level-2.md#slm-l2-adapter-r021)
-- [`SLM-L2-BUSINESS-A022`](../../rules/level-2.md#slm-l2-business-a022)
+- [`SLM-L2-API-A022`](../../rules/level-2.md#slm-l2-api-a022)
 - [`SLM-L2-ASSEMBLY-R023`](../../rules/level-2.md#slm-l2-assembly-r023)
+- [`SLM-L2-ASSEMBLY-R030`](../../rules/level-2.md#slm-l2-assembly-r030)
+- [`SLM-L2-ASSEMBLY-R031`](../../rules/level-2.md#slm-l2-assembly-r031)
 
 ## Назначение
 
-Assembly является SLM-модулем в Group `assemblies`. Она создаёт явный граф одного или нескольких Domain API пакета для конкретного повторяемого контекста выполнения. Каждый доменный пакет содержит минимум одну assembly.
+Assembly является SLM-модулем Group `assemblies`. Она выбирает production adapters своего домена, вызывает фабрики `api` и возвращает готовый именованный граф Domain API для одного объявленного production-контекста.
 
 ```text
-business/factory
-├── assemblies/browser       → { session: AuthSessionApi }
-├── assemblies/request       → { session, administration }
-└── assemblies/server-action → { administration }
+api/factory + adapters + cross-domain APIs
+  → assembly
+  → named Domain API graph
 ```
 
-Архитектура не требует `base` или изоморфную assembly и не ограничивает их максимальное количество. Обязательная assembly соответствует реальному поддерживаемому контексту, а не существует только для заполнения структуры.
+Assembly не добавляет предметные методы, модели, transitions или ошибки. Она также не владеет framework state: готовый API передаётся framework binding или composition.
 
-Место сборки графа в `composition` может вызвать фабрики напрямую для одноразовой конфигурации. Такая сборка не отменяет обязательную assembly пакета и при наличии технических зависимостей использует публичные adapter-модули, а не inline implementations.
+Импорт assembly не запускает side effects. Граф появляется только после вызова builder.
 
-## Именованный граф API
+## Обязательная default assembly
 
-Browser assembly импортирует только фабрики и adapters нужных ей API:
+Каждый пакет содержит модуль `assemblies/default`:
+
+```text
+auth/assemblies/
+├── default/
+│   └── index.ts
+└── administration/
+    └── index.ts
+```
+
+`default` является штатной production-сборкой домена для одного baseline capability set, объявленного проектом. Она может быть browser-only, server-only, worker-compatible или действительно isomorphic. Имя не сообщает environment compatibility.
+
+Пример metadata:
+
+```yaml
+assemblies:
+  default:
+    capabilities: [fetch, web-crypto]
+    conditions: [browser, import]
+  administration:
+    capabilities: [node, server-secrets]
+    conditions: [node, import]
+```
+
+Формат metadata не нормирован, но checker должен получать capability set и resolver conditions из явного project mapping, а не угадывать их по имени `default`.
+
+## Дополнительные assemblies
+
+Дополнительная assembly появляется, когда отличается реальная production-граница:
+
+- набор Domain API;
+- dependencies или providers;
+- trust boundary;
+- environment capabilities;
+- scope или lifecycle;
+- способ аутентификации;
+- realtime guarantees.
+
+Хорошие имена описывают контекст: `administration`, `realtime-session`, `worker`, `rsc`. Имя `rsc` оправдано только при отличающемся RSC wiring; само наличие Server Component не требует отдельной assembly.
+
+Не создаётся assembly-заглушка с методами, бросающими `NOT_SUPPORTED`. Контекст возвращает только реально доступные API.
+
+## Штатный граф
 
 ```ts
-import type { AuthSessionApi } from '@/domains/auth/business'
-import { authSessionFactory } from '@/domains/auth/business/factory'
-import { createPhoneHttpAdapter } from '@/domains/auth/adapters/phone-http'
-import { createBrowserSessionAdapter } from '@/domains/auth/adapters/browser-session'
+import type {
+  AuthSessionApi,
+} from '@/domains/auth/api'
 
-export type AuthBrowserGraph = Readonly<{
+import {
+  createAuthSessionApi,
+} from '@/domains/auth/api/factory'
+
+import {
+  createAuthRestAdapter,
+} from '@/domains/auth/adapters/identity-rest'
+
+export type AuthGraph = Readonly<{
   session: AuthSessionApi
 }>
 
-export const createBrowserAuth = (): AuthBrowserGraph => {
-  const session = authSessionFactory({
-    phone: createPhoneHttpAdapter(),
-    session: createBrowserSessionAdapter(),
+export const createAuth = (): AuthGraph => {
+  const session = createAuthSessionApi({
+    identity: createAuthRestAdapter(),
   })
 
   return { session }
 }
 ```
 
-Request assembly может собрать дополнительный API, которого нет в браузере:
+Обычный graph owner импортирует только production builder:
 
 ```ts
-import type {
-  AuthAdministrationApi,
-  AuthSessionApi,
-} from '@/domains/auth/business'
-
 import {
-  authAdministrationFactory,
-  authSessionFactory,
-} from '@/domains/auth/business/factory'
+  createAuth,
+} from '@/domains/auth/assemblies/default'
 
-export type AuthRequestGraph = Readonly<{
-  administration: AuthAdministrationApi
-  session: AuthSessionApi
-}>
+const auth = createAuth()
 ```
 
-Assembly не добавляет методы к этим контрактам и не создаёт общий `AuthApi`. Именованный объект только сообщает, какие независимые API доступны в контексте.
+Factory и concrete adapter остаются construction details assembly. Тесты API и adapters импортируют соответствующие границы напрямую.
+
+## React + Vite и Next.js
+
+В React + Vite `default` часто использует browser adapters:
+
+```text
+assemblies/default
+  → browser REST adapter
+  → browser WebSocket adapter
+```
+
+В Next.js та же `default` может считаться isomorphic только при совместимом executable graph под всеми заявленными conditions. Runtime branch не делает импорт безопасным:
+
+```ts
+// Недостаточное доказательство изоморфности.
+if (typeof window === 'undefined') {
+  return createServerAdapter()
+}
+
+return createBrowserAdapter()
+```
+
+Если server и client требуют разных concrete dependencies, используются разные assemblies или framework-specific resolver entries, проверяемые отдельно.
+
+## RSC boundary
+
+RSC не переносит API instance с сервера в браузер:
+
+```text
+Server Component
+  → request-scoped server assembly
+  → server Domain API instance
+  → public serializable value
+  → Client Component boundary
+  → separate client assembly
+  → separate client Domain API instance
+```
+
+Server Component исполняется в server scope. Его импорт Client Component является framework reference, а не обычным executable edge RSC graph. При включённом SSR или prerender сам Client Component дополнительно исполняется в отдельном server render graph, а затем в browser hydration graph; обе фазы проверяются, а browser-only effects объявляются как framework-deferred edges. Server Action создаёт и очищает собственный request graph на каждый вызов.
+
+Через boundary не передаются functions, API objects, ports, adapters, mutable cache clients или request secrets.
 
 ## Cross-domain input
 
-Assembly зависимого домена принимает готовый API аргументом. Cross-domain API не является adapter и не размещается в Group `adapters`:
+Assembly зависимого домена принимает готовый API аргументом:
 
 ```ts
-import type { AuthSessionApi } from '@/domains/auth/business'
-import type { UserProfileApi } from '@/domains/user/business'
-import { userProfileFactory } from '@/domains/user/business/factory'
-import { createUserProfileAdapter } from '@/domains/user/adapters/profile'
+import type {
+  AuthSessionApi,
+} from '@/domains/auth/api'
 
-export type CreateUserForRequestInput = {
-  auth: Pick<AuthSessionApi, 'getSnapshot'>
-  request: UserRequestInput
-}
-
-export type UserRequestGraph = Readonly<{
-  profile: UserProfileApi
+export type CreateUserInput = Readonly<{
+  auth: Pick<AuthSessionApi, 'getSession'>
 }>
 
-export const createUserForRequest = ({
+export const createUser = ({
   auth,
-  request,
-}: CreateUserForRequestInput): UserRequestGraph => {
-  const profile = userProfileFactory({
+}: CreateUserInput): UserGraph => {
+  const profile = createUserProfileApi({
     auth,
-    profile: createUserProfileAdapter(request),
+    profile: createUserProfileRestAdapter(),
   })
 
   return { profile }
 }
 ```
 
-Assembly делает только type-only импорт `AuthSessionApi`. Runtime-фабрику, assembly или instance Auth она не импортирует.
-
-Место сборки графа выполняет runtime-связь:
+Graph owner выполняет runtime-связь:
 
 ```ts
-const auth = createAuthForRequest(authInput)
-const user = createUserForRequest({
+const auth = createAuth()
+const user = createUser({
   auth: auth.session,
-  request: userInput,
 })
 ```
 
-## Environment entry points
+User assembly делает только type-only импорт Auth API. Она не импортирует Auth factory, adapter или assembly. Общий runtime dependency graph остаётся ацикличным.
 
-Server assembly имеет отдельный публичный entry point и marker выбранного framework или bundler:
+## Dependency-connected graph
 
-```ts
-import 'server-only'
+Наличие `assemblies/default` у каждого Level 2 package не требует eager-сборки всех доменов:
 
-export { createAuthForRequest } from './create-auth-for-request'
+```text
+route A
+  → auth/default
+  → user/default
+
+route B
+  → catalog/default
 ```
 
-Server entry point не реэкспортируется через `business`, Framework Group, browser assembly или корень доменного пакета. Аналогично client-only код не достигается из server/shared entry point, если выбранная среда запрещает такую зависимость.
+Graph owner вызывает только builders, необходимые текущему scope. Module-level вызов `createAuth()` и global registry готовых APIs нарушают явное владение scope.
 
 ## Lifecycle
 
-Factory не запускает запрос, subscription, timer или другую скрытую долгоживущую работу во время создания API. Assembly может активировать технический ресурс только с явной передачей cleanup своему caller. Операция Domain API, которая запускает ресурс позже, сама возвращает cleanup:
+Factory не запускает запрос, socket, subscription или timer во время создания API. Явная операция, которая позже запускает ресурс, возвращает cleanup:
 
 ```ts
-const stop = auth.session.startInvalidationTracking()
+const subscription = await chat.subscribe(observer)
 
 try {
-  // Scope использует API.
+  await runScope()
 } finally {
-  await stop()
+  await subscription.close()
 }
 ```
 
-Если assembly сама создаёт ресурс, принадлежащий всему возвращённому графу, результат дополнительно предоставляет cleanup handle:
+Если assembly создаёт owned resource или получает lifecycle handle adapter-owned resource, результат предоставляет aggregate cleanup:
 
 ```ts
-export type AuthRequestAssembly = Readonly<{
-  apis: AuthRequestGraph
+export type ChatAssembly = Readonly<{
+  apis: ChatGraph
   dispose: () => Promise<void>
 }>
 ```
 
-```ts
-const auth = createAuthForRequest(input)
+Cleanup является идемпотентным. После завершившегося cleanup resource не вызывает callbacks.
 
-try {
-  return await handleRequest(auth.apis)
-} finally {
-  await auth.dispose()
+У каждого resource ровно один owner. Adapter, который сам создаёт connection или source cache, остаётся владельцем и экспортирует lifecycle handle; assembly только включает этот handle в aggregate cleanup. Если connection создаёт assembly, adapter получает borrowed capability и не закрывает её самостоятельно.
+
+## Частичная ошибка сборки
+
+Assembly регистрирует cleanup сразу после создания каждого owned resource и сразу после получения adapter lifecycle handle. Если следующий шаг завершается ошибкой, все зарегистрированные obligations выполняются до передачи ошибки caller-у:
+
+```ts
+export const createChat = async (): Promise<ChatAssembly> => {
+  const cleanups: Array<() => Promise<void>> = []
+
+  try {
+    const connection = await createRealtimeConnection()
+    cleanups.push(connection.close)
+
+    const history = createHistoryAdapter(connection)
+    const messages = createMessagesApi({ history })
+
+    return {
+      apis: { messages },
+      dispose: createIdempotentReverseCleanup(cleanups),
+    }
+  } catch (error) {
+    await runReverseCleanup(cleanups)
+    throw error
+  }
 }
 ```
 
-Assembly без собственного ресурса не обязана возвращать пустой `dispose`. Graph owner вызывает каждый реально предоставленный cleanup не позже завершения application, route, request или test scope.
+Реализация helper не нормирована. Нормативны достижимость cleanup на failure path, обратный dependency order и отсутствие callbacks после завершения disposal.
 
-Одноразовое место сборки, которое вызывает фабрики напрямую, подчиняется той же границе: оно не запускает скрытый ресурс в constructor и сохраняет cleanup любого созданного adapter-ресурса до завершения своего scope.
-
-Рекомендуется делать `dispose` идемпотентным, освобождать частично созданные ресурсы при ошибке assembly и закрывать зависимые ресурсы раньше их зависимостей. Детальная политика rollback и поведения API после cleanup остаётся открытым вопросом.
+Assembly без cleanup obligations возвращает только API graph и не добавляет пустой `dispose` для симметрии. Наличие adapter-owned resource с переданным handle уже является cleanup obligation, даже если assembly не считается его владельцем.

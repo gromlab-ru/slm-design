@@ -23,8 +23,8 @@ hero:
 features:
   - title: Level 1 · Архитектурная база
     details: Шесть слоёв, доменные модули, публичные API, зависимости, вложенные границы и жизненный цикл ресурсов.
-  - title: Level 2 · Доменные пакеты
-    details: Business API, assemblies, adapters и Framework Groups с явными cross-domain и environment boundaries.
+  - title: Level 2 · Доменные API
+    details: Domain API, consumer-owned ports, production adapters, default assemblies и Framework Groups с явными runtime-границами.
   - title: Канонические правила
     details: Точные блокирующие требования отделены от определений, рекомендаций и примеров и собраны по уровням.
 ---
