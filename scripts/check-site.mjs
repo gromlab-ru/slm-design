@@ -13,6 +13,8 @@ const ruleRegistries = [
 const expectedPages = [
   '404.html',
   'index.html',
+  'architecture/dependencies.html',
+  'architecture/groups.html',
   'architecture/index.html',
   'architecture/layers.html',
   'architecture/modules.html',
@@ -138,7 +140,7 @@ if (!notFoundHtml.includes('Такой страницы нет')) {
 }
 
 const homeHtml = htmlByPage.get('index.html')
-if (!homeHtml.includes('Архитектура владения ответственностями')) {
+if (!homeHtml.includes('Архитектура фронтенд-приложений')) {
   throw new Error('Home page does not render the documentation-owned hero')
 }
 
@@ -163,8 +165,6 @@ for (const forbiddenRoute of [
   '/ru/',
   '/specification/',
   '/architecture/domains',
-  '/architecture/dependencies',
-  '/architecture/groups',
   '/architecture/components',
   '/architecture/nested-modules',
   '/architecture/lifecycle',

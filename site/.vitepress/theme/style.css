@@ -49,16 +49,129 @@ html {
   letter-spacing: -0.045em;
 }
 
+.VPHero .text {
+  max-width: 820px;
+  font-size: clamp(2.6rem, 5vw, 4.4rem);
+  line-height: 1.02;
+}
+
 .VPHero .tagline {
-  max-width: 660px;
-  font-size: 19px;
-  line-height: 1.65;
+  max-width: 760px;
+  font-size: 20px;
+  line-height: 1.6;
 }
 
 .VPFeature {
   border-color: rgba(120, 113, 108, 0.2) !important;
   background: color-mix(in srgb, var(--vp-c-bg-soft) 84%, transparent) !important;
   backdrop-filter: blur(8px);
+}
+
+.VPFeature .title {
+  font-size: 17px;
+  letter-spacing: -0.02em;
+}
+
+.VPFeature .details {
+  line-height: 1.65;
+}
+
+.VPContent.is-home .vp-doc {
+  max-width: 1120px;
+  padding-bottom: 112px;
+}
+
+.VPContent.is-home .vp-doc > h2 {
+  max-width: 860px;
+  margin-top: 96px;
+  padding-top: 0;
+  border-top: 0;
+  font-size: clamp(2rem, 4vw, 3.25rem);
+  line-height: 1.08;
+  letter-spacing: -0.045em;
+}
+
+.VPContent.is-home .vp-doc > h2:first-child {
+  margin-top: 48px;
+}
+
+.VPContent.is-home .vp-doc > p {
+  max-width: 820px;
+  font-size: 17px;
+  line-height: 1.78;
+}
+
+.VPContent.is-home .vp-doc > blockquote {
+  max-width: 920px;
+  margin: 40px 0;
+  padding: 28px 32px;
+  border: 1px solid color-mix(in srgb, var(--vp-c-brand-2) 36%, var(--vp-c-divider));
+  border-left: 4px solid var(--vp-c-brand-2);
+  border-radius: 0 14px 14px 0;
+  background: color-mix(in srgb, var(--vp-c-brand-soft) 62%, var(--vp-c-bg-soft));
+  color: var(--vp-c-text-1);
+  font-size: clamp(1.25rem, 2.5vw, 1.75rem);
+  line-height: 1.45;
+  letter-spacing: -0.025em;
+}
+
+.VPContent.is-home .vp-doc > blockquote p {
+  margin: 0;
+}
+
+.VPContent.is-home .vp-doc table {
+  display: table;
+  width: 100%;
+  margin: 36px 0;
+  border-collapse: separate;
+  border-spacing: 0;
+  overflow: hidden;
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 14px;
+}
+
+.VPContent.is-home .vp-doc th,
+.VPContent.is-home .vp-doc td {
+  width: 50%;
+  padding: 18px 20px;
+  border: 0;
+  border-bottom: 1px solid var(--vp-c-divider);
+  vertical-align: top;
+}
+
+.VPContent.is-home .vp-doc th {
+  background: var(--vp-c-bg-soft);
+  color: var(--vp-c-text-1);
+  font-size: 14px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.VPContent.is-home .vp-doc tr:last-child td {
+  border-bottom: 0;
+}
+
+.VPContent.is-home .vp-doc th + th,
+.VPContent.is-home .vp-doc td + td {
+  border-left: 1px solid var(--vp-c-divider);
+}
+
+.VPContent.is-home .vp-doc ol,
+.VPContent.is-home .vp-doc ul {
+  max-width: 860px;
+}
+
+.VPContent.is-home .vp-doc li {
+  margin: 10px 0;
+  line-height: 1.7;
+}
+
+.VPContent.is-home .vp-doc div[class*='language-'] {
+  max-width: 920px;
+  margin: 36px 0;
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 14px;
+  box-shadow: 0 24px 64px rgba(41, 37, 36, 0.08);
 }
 
 .vp-doc h1,
@@ -128,8 +241,35 @@ html {
 }
 
 @media (max-width: 640px) {
+  .VPHero .text {
+    font-size: clamp(2.15rem, 11vw, 3rem);
+    line-height: 1.06;
+  }
+
   .VPHero .tagline {
     font-size: 16px;
+  }
+
+  .VPContent.is-home .vp-doc {
+    padding-bottom: 72px;
+  }
+
+  .VPContent.is-home .vp-doc > h2 {
+    margin-top: 72px;
+  }
+
+  .VPContent.is-home .vp-doc > blockquote {
+    margin-inline: 0;
+    padding: 22px 20px;
+  }
+
+  .VPContent.is-home .vp-doc table {
+    font-size: 14px;
+  }
+
+  .VPContent.is-home .vp-doc th,
+  .VPContent.is-home .vp-doc td {
+    padding: 14px 12px;
   }
 
   .vp-doc h3[id^='slm-'] + blockquote {

@@ -10,9 +10,11 @@ const documentationSidebar = [
     text: 'Архитектурная модель',
     items: [
       { text: 'Владение и структура', link: '/architecture/' },
-      { text: 'Слои и группы', link: '/architecture/layers' },
+      { text: 'Слои', link: '/architecture/layers' },
+      { text: 'Группы', link: '/architecture/groups' },
       { text: 'Модули и границы', link: '/architecture/modules' },
       { text: 'Сегменты', link: '/architecture/segments' },
+      { text: 'Зависимости', link: '/architecture/dependencies' },
     ],
   },
   {

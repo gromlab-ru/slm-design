@@ -8,9 +8,11 @@
 
 - `/` - главная страница;
 - `/architecture/` - владение и структурная модель;
-- `/architecture/layers` - слои и группы;
+- `/architecture/layers` - слои;
+- `/architecture/groups` - группы модулей;
 - `/architecture/modules` - модули и публичные границы;
 - `/architecture/segments` - внутренняя организация модулей;
+- `/architecture/dependencies` - направления импортов и модульный граф;
 - `/rules/` - устройство правил;
 - `/rules/registry` - единый реестр правил;
 - `/reference/terminology` - нормативные определения;
