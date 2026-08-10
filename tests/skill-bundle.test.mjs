@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
+import { fileURLToPath } from 'node:url';
 import {
   createSkillBundle,
   listBundleFiles,
@@ -11,6 +12,7 @@ import {
   writeSkillBundle,
 } from '../scripts/lib/skill-bundle.mjs';
 import { slugifyHeading } from '../scripts/lib/slugify-heading.mjs';
+import skillConfig from '../src-skills/slm-design/skill.config.mjs';
 
 const requiredSkill = (extra = '') => [
   '---',
@@ -20,25 +22,23 @@ const requiredSkill = (extra = '') => [
   '',
   '# SLM Design',
   '',
-  '## Универсальный цикл решения',
-  '## Алгоритмы выбора',
-  '### Реализация',
-  '### Миграция Level 1 -> Level 2',
-  '### Архитектурное ревью',
-  '## Anti-patterns',
-  '## Stop conditions и адресные вопросы',
-  '## Когда открывать references',
+  ...skillConfig.requiredHeadings.map((heading) => `## ${heading}`),
+  '[Reference](./reference/docs/README.md)',
   extra,
   '',
 ].join('\n');
 
 const entry = (content) => ({ content: Buffer.from(content), sourcePath: 'fixture' });
-const config = { name: 'slm-design', references: [], legacyMarkers: ['old-docs'] };
+const config = {
+  ...skillConfig,
+  references: [],
+};
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 test('validates parsed Markdown links and ignores code examples', () => {
   const extra = [
-    '[Target](<./reference/draft/a(b).md#title>)',
-    '[Encoded](./reference/draft/foo%23bar.md)',
+    '[Target](<./reference/docs/a(b).md#title>)',
+    '[Encoded](./reference/docs/foo%23bar.md)',
     '<https://example.com/docs>',
     '`[inline][missing]`',
     '\\[escaped][missing]',
@@ -50,8 +50,9 @@ test('validates parsed Markdown links and ignores code examples', () => {
   ].join('\n');
   const bundle = new Map([
     ['SKILL.md', entry(requiredSkill(extra))],
-    ['reference/draft/a(b).md', entry('Title\n=====\n')],
-    ['reference/draft/foo#bar.md', entry('# Encoded\n')],
+    ['reference/docs/README.md', entry('# Documentation\n')],
+    ['reference/docs/a(b).md', entry('Title\n=====\n')],
+    ['reference/docs/foo#bar.md', entry('# Encoded\n')],
   ]);
 
   assert.doesNotThrow(() => validateSkillBundle({ bundle, config, repoRoot: '/workspace/repo' }));
@@ -60,6 +61,7 @@ test('validates parsed Markdown links and ignores code examples', () => {
 test('rejects undefined reference-style links', () => {
   const bundle = new Map([
     ['SKILL.md', entry(requiredSkill('[broken][missing-reference]'))],
+    ['reference/docs/README.md', entry('# Documentation\n')],
   ]);
 
   assert.throws(
@@ -78,6 +80,7 @@ test('rejects non-portable or unsafe links', () => {
   ]) {
     const bundle = new Map([
       ['SKILL.md', entry(requiredSkill(`[broken](${target})`))],
+      ['reference/docs/README.md', entry('# Documentation\n')],
     ]);
 
     assert.throws(
@@ -88,21 +91,98 @@ test('rejects non-portable or unsafe links', () => {
 });
 
 test('uses the same heading slugs as the documentation site', () => {
-  assert.equal(slugifyHeading('Миграция Level 1 -> Level 2'), 'миграция-level-1-level-2');
+  assert.equal(slugifyHeading('Архитектурное ревью'), 'архитектурное-ревью');
   assert.equal(slugifyHeading('`app`'), 'layer-app');
 });
 
 test('requires operational sections to be real headings', () => {
   const fencedSkill = requiredSkill().replace(
-    '## Универсальный цикл решения',
-    '```md\n## Универсальный цикл решения\n```',
+    '## Рабочий режим',
+    '```md\n## Рабочий режим\n```',
   );
-  const bundle = new Map([['SKILL.md', entry(fencedSkill)]]);
+  const bundle = new Map([
+    ['SKILL.md', entry(fencedSkill)],
+    ['reference/docs/README.md', entry('# Documentation\n')],
+  ]);
 
   assert.throws(
     () => validateSkillBundle({ bundle, config, repoRoot: '/workspace/repo' }),
     /missing operational heading/,
   );
+});
+
+test('requires a non-empty unique operational heading list', () => {
+  const bundle = new Map([
+    ['SKILL.md', entry(requiredSkill())],
+    ['reference/docs/README.md', entry('# Documentation\n')],
+  ]);
+
+  for (const requiredHeadings of [undefined, [], ['Рабочий режим', 'Рабочий режим']]) {
+    assert.throws(
+      () => validateSkillBundle({
+        bundle,
+        config: { ...config, requiredHeadings },
+        repoRoot: '/workspace/repo',
+      }),
+      /requiredHeadings/,
+    );
+  }
+});
+
+test('rejects an incomplete reference map', () => {
+  const bundle = new Map([
+    ['SKILL.md', entry(requiredSkill('[Mapped](./reference/docs/mapped.md)'))],
+    ['reference/docs/README.md', entry('# Documentation\n')],
+    ['reference/docs/mapped.md', entry('# Mapped\n')],
+    ['reference/docs/missing.md', entry('# Missing\n')],
+  ]);
+  const mapConfig = {
+    ...config,
+    referenceMap: {
+      heading: 'Карта файлов',
+      target: 'reference/docs',
+    },
+  };
+
+  assert.throws(
+    () => validateSkillBundle({ bundle, config: mapConfig, repoRoot: '/workspace/repo' }),
+    /reference map is incomplete.*reference\/docs\/missing\.md/,
+  );
+});
+
+test('requires reference map configuration', () => {
+  const bundle = new Map([
+    ['SKILL.md', entry(requiredSkill())],
+    ['reference/docs/README.md', entry('# Documentation\n')],
+  ]);
+
+  assert.throws(
+    () => validateSkillBundle({
+      bundle,
+      config: { ...config, referenceMap: undefined },
+      repoRoot: '/workspace/repo',
+    }),
+    /referenceMap must be an object/,
+  );
+});
+
+test('rejects configured legacy reference markers', () => {
+  const bundle = new Map([
+    ['SKILL.md', entry(requiredSkill('[Legacy](https://example.com/DRAFT/rules.md)'))],
+    ['reference/docs/README.md', entry('# Documentation\n')],
+  ]);
+
+  assert.throws(
+    () => validateSkillBundle({ bundle, config, repoRoot: '/workspace/repo' }),
+    /legacy marker: DRAFT\//,
+  );
+});
+
+test('validates the production skill and complete reference map', () => {
+  const bundle = createSkillBundle({ config: skillConfig, repoRoot });
+
+  assert.doesNotThrow(() => validateSkillBundle({ bundle, config: skillConfig, repoRoot }));
+  assert(bundle.has('reference/docs/rules/registry.md'));
 });
 
 test('rejects traversal through the skill name', () => {
@@ -153,12 +233,55 @@ test('rejects symbolic links in source and generated trees', () => {
   }
 });
 
+test('recursively bundles an entire reference root deterministically', () => {
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'slm-skill-recursive-'));
+  const sourceDir = path.join(fixtureRoot, 'src-skills', 'slm-design');
+  const docsDir = path.join(fixtureRoot, 'docs');
+  const architectureDir = path.join(docsDir, 'architecture');
+  const recursiveConfig = {
+    name: 'slm-design',
+    source: 'SKILL.md',
+    references: [
+      {
+        source: 'docs',
+        target: 'reference/docs',
+        include: ['.'],
+      },
+    ],
+  };
+
+  fs.mkdirSync(sourceDir, { recursive: true });
+  fs.mkdirSync(architectureDir, { recursive: true });
+  fs.writeFileSync(path.join(sourceDir, 'SKILL.md'), requiredSkill());
+  fs.writeFileSync(path.join(docsDir, 'README.md'), '# Documentation\n');
+  fs.writeFileSync(path.join(architectureDir, 'modules.md'), '# Modules\n');
+
+  try {
+    const firstBundle = createSkillBundle({ config: recursiveConfig, repoRoot: fixtureRoot });
+    const secondBundle = createSkillBundle({ config: recursiveConfig, repoRoot: fixtureRoot });
+    const expectedPaths = [
+      'SKILL.md',
+      'reference/docs/README.md',
+      'reference/docs/architecture/modules.md',
+    ];
+
+    assert.deepEqual([...firstBundle.keys()], expectedPaths);
+    assert.deepEqual([...secondBundle.keys()], expectedPaths);
+    assert.deepEqual(
+      [...firstBundle.values()].map((item) => item.content.toString('utf8')),
+      [...secondBundle.values()].map((item) => item.content.toString('utf8')),
+    );
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('atomically replaces generated output and remains deterministic', () => {
   const outputParent = fs.mkdtempSync(path.join(os.tmpdir(), 'slm-skill-output-'));
   const outputDir = path.join(outputParent, 'slm-design');
   const bundle = new Map([
     ['SKILL.md', entry(requiredSkill())],
-    ['reference/draft/README.md', entry('# Draft\n')],
+    ['reference/docs/README.md', entry('# Documentation\n')],
   ]);
 
   fs.mkdirSync(outputDir);
@@ -171,7 +294,7 @@ test('atomically replaces generated output and remains deterministic', () => {
     const files = listBundleFiles(outputDir)
       .map((filePath) => path.relative(outputDir, filePath).replaceAll(path.sep, '/'));
 
-    assert.deepEqual(files, ['SKILL.md', 'reference/draft/README.md']);
+    assert.deepEqual(files, ['SKILL.md', 'reference/docs/README.md']);
     assert.equal(fs.readFileSync(path.join(outputDir, 'SKILL.md'), 'utf8'), requiredSkill());
   } finally {
     fs.rmSync(outputParent, { recursive: true, force: true });

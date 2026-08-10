@@ -1,12 +1,34 @@
 export default {
   name: 'slm-design',
   source: 'SKILL.md',
+  requiredHeadings: [
+    'Источники истины',
+    'Рабочий режим',
+    'Сбор контекста',
+    'Проектирование',
+    'Реализация изменений',
+    'Архитектурное ревью',
+    'Миграция',
+    'Проверка результата',
+    'Stop conditions',
+    'Карта файлов',
+  ],
   references: [
     {
-      source: 'DRAFT',
-      target: 'reference/draft',
-      include: ['README.md', 'rules', 'level-1', 'level-2'],
+      source: 'docs',
+      target: 'reference/docs',
+      include: ['.'],
     },
   ],
-  legacyMarkers: ['old-docs', 'reference/canons', 'reference/slm-design'],
+  referenceMap: {
+    heading: 'Карта файлов',
+    target: 'reference/docs',
+  },
+  legacyMarkers: [
+    'DRAFT/',
+    'reference/draft',
+    'old-docs',
+    'reference/canons',
+    'reference/slm-design',
+  ],
 };

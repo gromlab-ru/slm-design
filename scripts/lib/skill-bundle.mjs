@@ -314,6 +314,39 @@ const collectMarkdownLinks = (tokens) => {
   return links.filter((link) => typeof link === 'string');
 };
 
+const collectHeadingSectionLinks = (tokens, heading) => {
+  const sections = [];
+
+  for (let index = 0; index < tokens.length; index += 1) {
+    if (
+      tokens[index].type !== 'heading_open'
+      || tokens[index + 1]?.type !== 'inline'
+      || headingText(tokens[index + 1]) !== heading
+    ) {
+      continue;
+    }
+
+    const level = Number.parseInt(tokens[index].tag.slice(1), 10);
+    let end = tokens.length;
+
+    for (let cursor = index + 3; cursor < tokens.length; cursor += 1) {
+      if (
+        tokens[cursor].type === 'heading_open'
+        && Number.parseInt(tokens[cursor].tag.slice(1), 10) <= level
+      ) {
+        end = cursor;
+        break;
+      }
+    }
+
+    sections.push(tokens.slice(index + 3, end));
+  }
+
+  assert(sections.length === 1, `SKILL.md must contain exactly one ${heading} section.`);
+
+  return collectMarkdownLinks(sections[0]);
+};
+
 const parseMarkdown = (content, filePath) => {
   const environment = {};
   const tokens = markdown.parse(content, environment);
@@ -321,6 +354,51 @@ const parseMarkdown = (content, filePath) => {
   assertDefinedReferenceLinks(tokens, environment.references ?? {}, filePath);
 
   return { links: collectMarkdownLinks(tokens), tokens };
+};
+
+const assertReferenceMap = ({ bundle, referenceMap, skillTokens }) => {
+  assert(
+    referenceMap && typeof referenceMap === 'object' && !Array.isArray(referenceMap),
+    'Skill referenceMap must be an object.',
+  );
+  assert(
+    typeof referenceMap.heading === 'string' && referenceMap.heading.trim() !== '',
+    'Skill referenceMap.heading must be a non-empty string.',
+  );
+  assert(
+    typeof referenceMap.target === 'string' && referenceMap.target.trim() !== '',
+    'Skill referenceMap.target must be a non-empty string.',
+  );
+
+  const targetRoot = normalizeBundlePath(referenceMap.target);
+  const targetPrefix = `${targetRoot}/`;
+  const expectedPaths = [...bundle.keys()].filter((filePath) => filePath.startsWith(targetPrefix));
+
+  assert(expectedPaths.length > 0, `Skill reference map target is empty: ${targetRoot}`);
+
+  const mappedPaths = new Set();
+  const mapLinks = collectHeadingSectionLinks(skillTokens, referenceMap.heading);
+
+  for (const rawTarget of mapLinks) {
+    const target = normalizeLinkTarget(rawTarget, 'SKILL.md');
+
+    if (!target || target.targetPath === '') {
+      continue;
+    }
+
+    const resolvedPath = resolveBundleLink(bundle, 'SKILL.md', target.targetPath);
+
+    if (resolvedPath.startsWith(targetPrefix)) {
+      mappedPaths.add(resolvedPath);
+    }
+  }
+
+  const missingPaths = expectedPaths.filter((filePath) => !mappedPaths.has(filePath));
+
+  assert(
+    missingPaths.length === 0,
+    `Skill reference map is incomplete. Missing: ${missingPaths.join(', ')}`,
+  );
 };
 
 const assertMarkdownLinks = (bundle, filePath, content) => {
@@ -383,26 +461,37 @@ export const validateSkillBundle = ({ bundle, config, repoRoot }) => {
         : [];
     }),
   );
-  const requiredHeadings = [
-    'Универсальный цикл решения',
-    'Алгоритмы выбора',
-    'Реализация',
-    'Миграция Level 1 -> Level 2',
-    'Архитектурное ревью',
-    'Anti-patterns',
-    'Stop conditions и адресные вопросы',
-    'Когда открывать references',
-  ];
+  const requiredHeadings = config.requiredHeadings;
 
   assert(frontmatter.name === config.name, `SKILL.md name must be ${config.name}.`);
   assert(
     typeof frontmatter.description === 'string' && frontmatter.description.trim() !== '',
     'SKILL.md frontmatter must contain a non-empty string description.',
   );
+  assert(
+    Array.isArray(requiredHeadings) && requiredHeadings.length > 0,
+    'Skill requiredHeadings must be a non-empty array.',
+  );
 
-  for (const heading of requiredHeadings) {
+  const normalizedRequiredHeadings = requiredHeadings.map((heading) => {
+    assert(
+      typeof heading === 'string' && heading.trim() !== '',
+      'Skill requiredHeadings must contain non-empty strings.',
+    );
+
+    return heading.trim();
+  });
+
+  assert(
+    new Set(normalizedRequiredHeadings).size === normalizedRequiredHeadings.length,
+    'Skill requiredHeadings must not contain duplicates.',
+  );
+
+  for (const heading of normalizedRequiredHeadings) {
     assert(headings.has(heading), `SKILL.md is missing operational heading: ${heading}`);
   }
+
+  assertReferenceMap({ bundle, referenceMap: config.referenceMap, skillTokens });
 
   for (const [filePath, entry] of bundle) {
     const extension = path.posix.extname(filePath).toLowerCase();

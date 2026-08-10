@@ -4,9 +4,8 @@
 
 ## Структура
 
-- `docs/` - документация SLM и единственный источник содержимого сайта.
+- `docs/` - документация SLM и единственный источник содержимого сайта и reference-материалов skill.
 - `site/` - VitePress-рендерер: конфигурация, тема и статические ресурсы без собственной копии документации.
-- `DRAFT/` - прежний рабочий материал, не используемый сайтом.
 - `old-docs/` - архив legacy-документации, не используемый текущим skill.
 - `src-skills/` - исходники agent skills.
 - `skills/` - собранные skills для установки через `npx skills`.
@@ -23,12 +22,12 @@ npm run check:site
 npm run check
 ```
 
-`npm run check:docs` проверяет правила и ссылки документации. `npm run check:site` собирает VitePress из `docs/` и проверяет опубликованные страницы. Skill пока собирается отдельно из `src-skills/slm-design/` и собственных reference-материалов; не редактируй собранные файлы вручную.
+`npm run check:docs` проверяет правила и ссылки документации. `npm run check:site` собирает VitePress из `docs/` и проверяет опубликованные страницы. Skill собирается из `src-skills/slm-design/`, а всё дерево `docs/` рекурсивно включается в `skills/slm-design/reference/docs/`. Собранные файлы не редактируются вручную.
 
 ## Установка
 
 После публикации репозитория:
 
 ```bash
-npx skills add <owner>/slm-design-new --skill slm-design
+npx skills add gromlab-ru/slm-design --skill slm-design
 ```
