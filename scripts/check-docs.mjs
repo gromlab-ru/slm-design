@@ -2,11 +2,11 @@ import { readdir, readFile } from 'node:fs/promises'
 import { dirname, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-const rootDirectory = dirname(fileURLToPath(import.meta.url))
-const draftDirectory = join(rootDirectory, 'DRAFT')
-const rulesDirectory = join(draftDirectory, 'rules')
-const ruleCodeSource = 'SLM-L\\d+-[A-Z][A-Z_]{1,31}-[AR]\\d{3}'
-const ruleHeadingPattern = new RegExp(`^###\\s+(?<code>SLM-L(?<level>\\d+)-(?<group>[A-Z][A-Z_]{1,31})-(?<classification>[AR])(?<number>\\d{3}))$`)
+const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..')
+const docsDirectory = join(repositoryRoot, 'docs')
+const rulesDirectory = join(docsDirectory, 'rules')
+const ruleCodeSource = 'SLM-[A-Z][A-Z_]{1,31}-[AR]\\d{3}'
+const ruleHeadingPattern = new RegExp(`^###\\s+(?<code>SLM-(?<group>[A-Z][A-Z_]{1,31})-(?<classification>[AR])(?<number>\\d{3}))$`)
 const ruleCodePattern = new RegExp(`\\b${ruleCodeSource}\\b`, 'g')
 const ruleReferencePattern = new RegExp(
   '\\[`(?<code>' + ruleCodeSource + ')`\\]\\((?<target>[^)\\s]+)\\)',
@@ -68,7 +68,7 @@ const parseRules = async (file) => {
     const match = line.match(ruleHeadingPattern)
 
     if (match?.groups) {
-      const source = `${relative(rootDirectory, file)}:${index + 1}`
+      const source = `${relative(repositoryRoot, file)}:${index + 1}`
       const titleMatch = lines[index + 2]?.match(ruleTitlePattern)
       const descriptionMatch = lines[index + 4]?.match(ruleDescriptionPattern)
 
@@ -93,13 +93,12 @@ const parseRules = async (file) => {
         classification: match.groups.classification,
         description: descriptionMatch.groups.description.trim(),
         file,
-        level: Number(match.groups.level),
         number: Number(match.groups.number),
         title: titleMatch.groups.title.trim(),
         source,
       })
-    } else if (/^#{1,6}\s+SLM-L/.test(line)) {
-      throw new Error(`Invalid SLM rule heading at ${relative(rootDirectory, file)}:${index + 1}`)
+    } else if (/^#{1,6}\s+SLM-/.test(line)) {
+      throw new Error(`Invalid SLM rule heading at ${relative(repositoryRoot, file)}:${index + 1}`)
     }
   })
 
@@ -112,10 +111,10 @@ const parseReferences = async (file) => {
   const references = []
 
   visitMarkdownLines(lines, (line, index) => {
-    const source = `${relative(rootDirectory, file)}:${index + 1}`
+    const source = `${relative(repositoryRoot, file)}:${index + 1}`
 
-    if (/^#{1,6}\s+SLM-L/.test(line)) {
-      throw new Error(`SLM rule declaration is only allowed in DRAFT/rules: ${source}`)
+    if (/^#{1,6}\s+SLM-/.test(line)) {
+      throw new Error(`SLM rule declaration is only allowed in docs/rules: ${source}`)
     }
 
     const codeMatches = [...line.matchAll(ruleCodePattern)]
@@ -167,11 +166,11 @@ const printSection = (title, rules) => {
 }
 
 const ruleFiles = await getMarkdownFiles(rulesDirectory)
-const draftFiles = (await getMarkdownFiles(draftDirectory))
+const documentationFiles = (await getMarkdownFiles(docsDirectory))
   .filter((file) => !ruleFiles.includes(file))
 const rules = (await Promise.all(ruleFiles.map(parseRules))).flat()
 const rulesByCode = new Map()
-const rulesByLevelNumber = new Map()
+const rulesByNumber = new Map()
 
 for (const rule of rules) {
   const duplicate = rulesByCode.get(rule.code)
@@ -182,19 +181,18 @@ for (const rule of rules) {
 
   rulesByCode.set(rule.code, rule)
 
-  const levelNumber = `${rule.level}:${rule.number}`
-  const duplicateNumber = rulesByLevelNumber.get(levelNumber)
+  const duplicateNumber = rulesByNumber.get(rule.number)
 
   if (duplicateNumber) {
     throw new Error(
-      `Duplicate SLM rule number L${rule.level}-${String(rule.number).padStart(3, '0')}: ${duplicateNumber.source}, ${rule.source}`,
+      `Duplicate SLM rule number ${String(rule.number).padStart(3, '0')}: ${duplicateNumber.source}, ${rule.source}`,
     )
   }
 
-  rulesByLevelNumber.set(levelNumber, rule)
+  rulesByNumber.set(rule.number, rule)
 }
 
-const references = (await Promise.all(draftFiles.map(parseReferences))).flat()
+const references = (await Promise.all(documentationFiles.map(parseReferences))).flat()
 const referencedCodes = new Set()
 
 for (const reference of references) {
@@ -213,13 +211,12 @@ for (const reference of references) {
 
 for (const rule of rules) {
   if (!referencedCodes.has(rule.code)) {
-    throw new Error(`SLM rule ${rule.code} is not referenced by any draft`)
+    throw new Error(`SLM rule ${rule.code} is not referenced by any documentation page`)
   }
 }
 
 rules.sort((left, right) => (
-  left.level - right.level
-  || left.number - right.number
+  left.number - right.number
   || left.code.localeCompare(right.code)
 ))
 

@@ -1,15 +1,15 @@
-# Вложенные модули Level 1
+# Вложенные модули
 
-> Пояснение нормативной модели вложенных модулей Level 1.
+> Пояснение нормативной модели вложенных модулей SLM.
 
-Вложенный модуль является обычным модулем, размещённым внутри границы родительского модуля. Он имеет собственные ответственность, публичный API и узел графа зависимостей и подчиняется всем общим правилам модулей.
+Вложенный модуль является обычным модулем, размещённым внутри границы родительского модуля. Он имеет собственные ответственность, публичный API и границу зависимостей и подчиняется всем общим правилам модулей.
 
 ## Связанные правила
 
-- [`SLM-L1-MODULE-A004`](../rules/level-1.md#slm-l1-module-a004)
-- [`SLM-L1-MODULE-R006`](../rules/level-1.md#slm-l1-module-r006)
-- [`SLM-L1-DEPENDENCY-A005`](../rules/level-1.md#slm-l1-dependency-a005)
-- [`SLM-L1-NESTED_MODULE-A010`](../rules/level-1.md#slm-l1-nested_module-a010)
+- [`SLM-MODULE-A004`](../rules/registry.md#slm-module-a004)
+- [`SLM-MODULE-R006`](../rules/registry.md#slm-module-r006)
+- [`SLM-DEPENDENCY-A005`](../rules/registry.md#slm-dependency-a005)
+- [`SLM-NESTED_MODULE-A010`](../rules/registry.md#slm-nested_module-a010)
 
 ## Пример
 

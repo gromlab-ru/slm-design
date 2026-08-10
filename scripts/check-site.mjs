@@ -7,43 +7,20 @@ const distRoot = path.join(repositoryRoot, 'site', '.vitepress', 'dist')
 const siteOrigin = 'https://site.test'
 const siteBase = '/slm-design/'
 const ruleRegistries = [
-  { source: path.join(repositoryRoot, 'DRAFT', 'rules', 'level-1.md'), route: 'rules/level-1' },
-  { source: path.join(repositoryRoot, 'DRAFT', 'rules', 'level-2.md'), route: 'rules/level-2' },
+  { source: path.join(repositoryRoot, 'docs', 'rules', 'registry.md'), route: 'rules/registry' },
 ]
 
 const expectedPages = [
   '404.html',
   'index.html',
-  'level-1/index.html',
-  'level-1/terminology.html',
-  'level-1/layers.html',
-  'level-1/domains.html',
-  'level-1/dependencies.html',
-  'level-1/modules.html',
-  'level-1/groups.html',
-  'level-1/segments.html',
-  'level-1/components.html',
-  'level-1/nested-modules.html',
-  'level-1/lifecycle.html',
-  'level-1/validation.html',
-  'level-2/index.html',
-  'level-2/terminology.html',
-  'level-2/dependencies.html',
-  'level-2/validation.html',
-  'level-2/domains/index.html',
-  'level-2/domains/domain-package.html',
-  'level-2/domains/domain-api.html',
-  'level-2/domains/factory-ports-adapters.html',
-  'level-2/domains/assemblies.html',
-  'level-2/domains/state-cache.html',
-  'level-2/domains/framework-bindings.html',
-  'level-2/domains/realtime.html',
-  'level-2/domains/testing.html',
-  'level-2/domains/auth-example.html',
-  'level-2/domains/open-questions.html',
+  'architecture/index.html',
+  'architecture/layers.html',
+  'architecture/modules.html',
+  'architecture/segments.html',
+  'reference/terminology.html',
+  'reference/validation.html',
   'rules/index.html',
-  'rules/level-1.html',
-  'rules/level-2.html',
+  'rules/registry.html',
 ].sort()
 
 async function collectHtmlFiles(directory, prefix = '') {
@@ -135,7 +112,7 @@ let ruleCount = 0
 
 for (const registry of ruleRegistries) {
   const rulesMarkdown = await readFile(registry.source, 'utf8')
-  const ruleIds = [...rulesMarkdown.matchAll(/^### (SLM-L\d+-[A-Z_]+-[AR]\d{3})$/gm)]
+  const ruleIds = [...rulesMarkdown.matchAll(/^### (SLM-[A-Z_]+-[AR]\d{3})$/gm)]
     .map((match) => match[1])
   const rulesHtml = htmlByPage.get(`${registry.route}.html`)
 
@@ -156,12 +133,43 @@ for (const registry of ruleRegistries) {
 }
 
 const notFoundHtml = htmlByPage.get('404.html')
-if (!notFoundHtml.includes('Страница не найдена')) {
+if (!notFoundHtml.includes('Такой страницы нет')) {
   throw new Error('404 page is not localized')
 }
 
+const homeHtml = htmlByPage.get('index.html')
+if (!homeHtml.includes('Архитектура владения ответственностями')) {
+  throw new Error('Home page does not render the documentation-owned hero')
+}
+
+if ([...homeHtml.matchAll(/<h1\b/g)].length !== 1) {
+  throw new Error('Home page must have exactly one primary heading')
+}
+
+for (const [relativePath, html] of htmlByPage) {
+  for (const obsoleteText of [
+    'Последовательная архитектура',
+    'Рабочий черновик архитектуры',
+    'edit/master/DRAFT/',
+  ]) {
+    if (html.includes(obsoleteText)) {
+      throw new Error(`${relativePath} contains obsolete copy: ${obsoleteText}`)
+    }
+  }
+}
+
 const sitemap = await readFile(path.join(distRoot, 'sitemap.xml'), 'utf8')
-for (const forbiddenRoute of ['/ru/', '/specification/']) {
+for (const forbiddenRoute of [
+  '/ru/',
+  '/specification/',
+  '/architecture/domains',
+  '/architecture/dependencies',
+  '/architecture/groups',
+  '/architecture/components',
+  '/architecture/nested-modules',
+  '/architecture/lifecycle',
+  '/architecture/validation',
+]) {
   if (sitemap.includes(forbiddenRoute)) {
     throw new Error(`Sitemap contains archival or excluded route ${forbiddenRoute}`)
   }
