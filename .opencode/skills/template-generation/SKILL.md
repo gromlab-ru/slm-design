@@ -1,6 +1,8 @@
 ---
 name: template-generation
 description: "Используй при создании, изменении или проверке повторяемой файловой структуры и шаблонов генерации. Триггеры: .templates, @gromlab/create, Template File Generator, scaffold, шаблон, генератор, создать компонент, модуль, layout, screen, widget, business, store, hook, service, page-entry, boilerplate, index.ts, типы, стили, тесты, повторить структуру без copy-paste, настроить генерацию файлов. НЕ используй для одноразовой точечной правки, code style, SLM-архитектуры без генерации файлов, Next.js routing, REST-клиентов или SVG sprites."
+metadata:
+  internal: true
 ---
 
 <!-- Generated from src/SKILL.md. Do not edit manually. -->

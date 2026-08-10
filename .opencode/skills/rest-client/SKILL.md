@@ -1,6 +1,8 @@
 ---
 name: rest-client
 description: "Используй при создании, изменении или ревью REST API клиента и infra REST-модуля. Триггеры: REST API, REST client, API client, backend API, external API, OpenAPI, Swagger, ручной клиент без OpenAPI, @gromlab/api-codegen, @gromlab/api-codegen@5.1.0, src/infra/*-rest-api, *-rest-api-sdk, REST SDK, npm SDK, client.ts, rest-api.ts, operations-tree.ts, *HttpClient, *RestApi, generated/, operations/, operations/*, data-contracts, hooks/, types/, errors/, HttpClient, ApiRequestClient, RequestParams, ContentType, createApiClient, operationsTree, full client, minimal client, SDK exports, onRequest, onResponse, onError, JWT, refresh token, ApiError, useGet*, get*Key, useSWR, SWRConfiguration, DTO, API error, public API REST-модуля. НЕ используй для любого fetch вне REST-клиента проекта, route-level data fetching Next.js, SLM-архитектуры без REST-модуля, code style, SVG sprites или генерации шаблонов."
+metadata:
+  internal: true
 ---
 
 <!-- Generated from src/SKILL.md. Do not edit manually. -->

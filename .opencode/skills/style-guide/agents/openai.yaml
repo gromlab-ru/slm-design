@@ -1,4 +1,0 @@
-interface:
-  display_name: "Style Guide"
-  short_description: "Frontend code style, naming and local consistency"
-  default_prompt: "Use $style-guide to format or review frontend code according to the project style guide and local code conventions."

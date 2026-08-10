@@ -7,8 +7,13 @@ on:
       - '.github/workflows/docs.yml'
       - 'docs/**'
       - 'site/**'
+      - 'src-skills/**'
+      - 'skills/**'
+      - 'scripts/build-skill.mjs'
+      - 'scripts/check-skill.mjs'
       - 'scripts/check-docs.mjs'
       - 'scripts/check-site.mjs'
+      - 'scripts/lib/skill-bundle.mjs'
       - 'scripts/lib/slugify-heading.mjs'
       - 'package.json'
       - 'package-lock.json'
@@ -17,8 +22,13 @@ on:
       - '.github/workflows/docs.yml'
       - 'docs/**'
       - 'site/**'
+      - 'src-skills/**'
+      - 'skills/**'
+      - 'scripts/build-skill.mjs'
+      - 'scripts/check-skill.mjs'
       - 'scripts/check-docs.mjs'
       - 'scripts/check-site.mjs'
+      - 'scripts/lib/skill-bundle.mjs'
       - 'scripts/lib/slugify-heading.mjs'
       - 'package.json'
       - 'package-lock.json'
@@ -49,8 +59,37 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Check documentation
-        run: npm run check:site
+      - name: Check project
+        run: npm run check
+
+      - name: Resolve skill tree hash
+        id: skill
+        run: echo "tree_hash=$(git rev-parse HEAD:skills/slm-design)" >> "$GITHUB_OUTPUT"
+
+      - name: Restore skill archive
+        id: skill-cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/slm-design.zip
+          key: slm-design-zip-v1-${{ steps.skill.outputs.tree_hash }}
+
+      - name: Pack skill
+        if: steps.skill-cache.outputs.cache-hit != 'true'
+        run: >-
+          git archive
+          --format=zip
+          --prefix=slm-design/
+          --mtime=2000-01-01T00:00:00Z
+          --output="$RUNNER_TEMP/slm-design.zip"
+          "${{ steps.skill.outputs.tree_hash }}"
+
+      - name: Verify skill archive
+        run: unzip -t "$RUNNER_TEMP/slm-design.zip"
+
+      - name: Add skill archive to Pages
+        run: |
+          mkdir -p site/.vitepress/dist/downloads
+          cp "$RUNNER_TEMP/slm-design.zip" site/.vitepress/dist/downloads/slm-design.zip
 
       - name: Configure Pages
         uses: actions/configure-pages@v5

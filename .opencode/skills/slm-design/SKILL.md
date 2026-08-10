@@ -1,6 +1,8 @@
 ---
 name: slm-design
 description: "Экспертная работа с архитектурой SLM Design: проектирование, изменение, миграция и ревью слоёв app/compositions/domains/infra/ui/shared, модулей, доменов, публичных фасетов index/client/browser/server, групп, сегментов, вложенных модулей, зависимостей, состояния и lifecycle. Триггеры: SLM, Scoped Layered Module Design, SLM root, ответственность, владелец, модульная граница, domains vs compositions, доменный контракт, DTO, глубокий импорт, модульный цикл, архитектурное ревью. НЕ применять для обычного code style или локальной правки, не затрагивающей архитектурное решение."
+metadata:
+  internal: true
 ---
 
 # SLM Design
