@@ -1,4 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" role="img" aria-label="SLM Design">
-  <rect width="40" height="40" rx="10" fill="#111315"/>
-  <path d="M10 11h20v5H16v3h11v5H16v5h14" fill="none" stroke="#f59e0b" stroke-width="4" stroke-linejoin="round"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" role="img" aria-labelledby="slm-logo-title">
+  <title id="slm-logo-title">SLM Design</title>
+  <g fill="none" stroke="#f59e0b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M5 8.2 12 4.5l7 3.7-7 3.7-7-3.7Z"/>
+    <path d="M5 12 12 15.7 19 12"/>
+    <path d="M5 15.8 12 19.5l7-3.7"/>
+  </g>
+  <circle cx="12" cy="8.2" r="1" fill="#f59e0b"/>
+  <circle cx="8.8" cy="13.8" r=".75" fill="#f59e0b"/>
+  <circle cx="15.2" cy="13.8" r=".75" fill="#f59e0b"/>
 </svg>
