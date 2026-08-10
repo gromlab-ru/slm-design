@@ -1,0 +1,57 @@
+.root {
+  display: grid;
+  gap: 1.1rem;
+}
+
+.accounts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+
+.account {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.85rem;
+  border: 1px solid var(--color-line);
+  border-radius: 0.9rem;
+  color: var(--color-ink-muted);
+  background: rgb(255 255 255 / 55%);
+  font: inherit;
+  font-size: 0.75rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.account:hover,
+.account:focus-visible {
+  border-color: var(--color-accent);
+  outline: none;
+}
+
+.accountActive {
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft);
+  box-shadow: inset 0 0 0 1px var(--color-accent);
+}
+
+.accountRole {
+  color: var(--color-ink);
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+
+.error {
+  margin: 0;
+  padding: 0.8rem 0.9rem;
+  border-radius: 0.75rem;
+  color: var(--color-danger);
+  background: var(--color-danger-soft);
+  font-size: 0.82rem;
+}
+
+@media (max-width: 520px) {
+  .accounts {
+    grid-template-columns: 1fr;
+  }
+}

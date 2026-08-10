@@ -1,0 +1,42 @@
+.loader {
+  display: grid;
+  min-height: 100svh;
+  place-items: center;
+  align-content: center;
+  gap: 0.5rem;
+  color: var(--color-ink-muted);
+}
+
+.loaderMark {
+  display: grid;
+  width: 3.4rem;
+  height: 3.4rem;
+  margin-bottom: 0.75rem;
+  place-items: center;
+  border-radius: 1rem 1rem 1rem 0.25rem;
+  color: #fffaf0;
+  background: var(--color-accent-strong);
+  box-shadow: 0 14px 35px rgb(31 86 62 / 22%);
+  font-family: var(--font-display);
+  font-size: 1.7rem;
+  animation: breathe 1.4s ease-in-out infinite;
+}
+
+.loader strong {
+  color: var(--color-ink);
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+}
+
+.loader small {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+@keyframes breathe {
+  50% {
+    transform: translateY(-4px);
+  }
+}
