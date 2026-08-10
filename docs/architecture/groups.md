@@ -25,10 +25,12 @@ compositions/
 ├── layouts/            # Группа
 │   └── main/           # Модуль
 └── widgets/            # Группа
-    └── cart-summary/   # Модуль
+    └── dashboard/      # Модуль, компонующий несколько доменных API
 ```
 
 Названия `pages`, `layouts` и `widgets` показывают один из вариантов навигации и не создают дополнительные слои или обязательные роли.
+
+Модули `catalog`, `profile` и `dashboard` в примере отвечают только за представление и связывание готовых публичных API. Сценарии каталога, профиля и других предметных областей остаются в соответствующих модулях `domains`.
 
 ## Ограничения группы
 
@@ -51,14 +53,14 @@ Barrel-файл, открывающий несколько модулей гру
 Код импортирует конкретный модуль:
 
 ```ts
-import { CartSummary } from '@/compositions/widgets/cart-summary'
+import { Dashboard } from '@/compositions/widgets/dashboard'
 ```
 
 Группа не становится промежуточной точкой доступа:
 
 ```ts
 // Недопустимый API группы
-import { CartSummary } from '@/compositions/widgets'
+import { Dashboard } from '@/compositions/widgets'
 ```
 
 Полные правила графа находятся в разделе [Зависимости](./dependencies.md).
@@ -76,6 +78,7 @@ import { CartSummary } from '@/compositions/widgets'
 
 ## Связанные правила
 
+- [`SLM-DOMAIN-R022`](../rules/registry.md#slm-domain-r022)
 - [`SLM-GROUP-R007`](../rules/registry.md#slm-group-r007)
 - [`SLM-MODULE-R011`](../rules/registry.md#slm-module-r011)
 - [`SLM-DEPENDENCY-A005`](../rules/registry.md#slm-dependency-a005)

@@ -14,6 +14,7 @@ const expectedPages = [
   '404.html',
   'index.html',
   'architecture/dependencies.html',
+  'architecture/domains.html',
   'architecture/groups.html',
   'architecture/index.html',
   'architecture/layers.html',
@@ -164,7 +165,6 @@ const sitemap = await readFile(path.join(distRoot, 'sitemap.xml'), 'utf8')
 for (const forbiddenRoute of [
   '/ru/',
   '/specification/',
-  '/architecture/domains',
   '/architecture/components',
   '/architecture/nested-modules',
   '/architecture/lifecycle',

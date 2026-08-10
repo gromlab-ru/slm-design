@@ -11,6 +11,7 @@
 - `/architecture/layers` - слои;
 - `/architecture/groups` - группы модулей;
 - `/architecture/modules` - модули и публичные границы;
+- `/architecture/domains` - домены, предметные контракты и ошибки;
 - `/architecture/segments` - внутренняя организация модулей;
 - `/architecture/dependencies` - направления импортов и модульный граф;
 - `/rules/` - устройство правил;
