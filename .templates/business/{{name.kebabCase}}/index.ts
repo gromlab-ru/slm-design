@@ -1,6 +1,0 @@
-export { {{name.camelCase}}Factory } from './{{name.kebabCase}}.factory'
-export type { {{name.pascalCase}}Api } from './types/{{name.kebabCase}}-api.type'
-export type { {{name.pascalCase}}Deps } from './types/{{name.kebabCase}}-deps.type'
-export type { {{name.pascalCase}}Error } from './types/{{name.kebabCase}}-error.type'
-export type { {{name.pascalCase}}ErrorCode } from './types/{{name.kebabCase}}-error-code.type'
-export type { {{name.pascalCase}}Factory } from './types/{{name.kebabCase}}-factory.type'
