@@ -4,15 +4,24 @@
 
 Цель SLM - сделать архитектурные решения наблюдаемыми в структуре проекта: понимать, какой модуль отвечает за результат, что доступно его потребителям и как изменение повлияет на остальное приложение.
 
-[Документация](https://gromlab-ru.github.io/slm-design/) | [Пример React-приложения](./examples/react-vite/)
+> [!IMPORTANT]
+> **SLM Design больше не поддерживается.**
+>
+> В ходе развития проекта были выявлены архитектурные ограничения, которые невозможно устранить без изменения базовой модели. Архитектура была полностью переосмыслена и перенесена в проект [Unit Architecture](https://github.com/gromlab-ru/unit-architecture).
+>
+> Все дальнейшие обновления, документация и AI skill будут выходить в новом репозитории. Этот репозиторий сохраняется как архив предыдущего подхода.
+
+[Новая архитектура](https://github.com/gromlab-ru/unit-architecture) | [Архивная документация SLM](https://gromlab-ru.github.io/slm-design/)
 
 ## AI skill
 
+Для новых архитектурных решений используйте skill Unit Architecture:
+
 ```bash
-npx skills add gromlab-ru/slm-design
+npx skills add gromlab-ru/unit-architecture
 ```
 
-Или [скачать `slm-design.zip`](https://gromlab-ru.github.io/slm-design/downloads/slm-design.zip).
+Skill SLM Design остаётся доступен только для сопровождения существующих legacy-проектов и больше не обновляется.
 
 ## О чём SLM
 

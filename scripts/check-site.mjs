@@ -141,8 +141,8 @@ if (!notFoundHtml.includes('Такой страницы нет')) {
 }
 
 const homeHtml = htmlByPage.get('index.html')
-if (!homeHtml.includes('Архитектура фронтенд-приложений')) {
-  throw new Error('Home page does not render the documentation-owned hero')
+if (!homeHtml.includes('SLM Design больше не поддерживается')) {
+  throw new Error('Home page does not render the deprecation notice')
 }
 
 if ([...homeHtml.matchAll(/<h1\b/g)].length !== 1) {
